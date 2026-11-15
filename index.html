@@ -1,0 +1,1371 @@
+<meta charset="utf-8">
+<title>ONE CIRCLE ノート</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: SaaS型。PCは左固定サイドバー240px＋本文、スマホは下部ナビ。細いボーダーと余白で階層、インディゴを操作色、6事業色はデータとステータスだけに使う（ChatGPTとのデザイン相談より） */
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --ink:#172033; --sub:#64748b; --line:#e2e8f0; --hover:#eef2ff; --soft:#f1f4f8;
+  --accent:#4f46e5; --accent-ink:#ffffff;
+  --ok:#15803d; --warn:#b45309; --bad:#dc2626;
+  --b-jinzai:#2563eb; --b-event:#0d9488; --b-estate:#d97706; --b-school:#7c3aed; --b-beauty:#db2777; --b-circle:#ea580c;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 2px 8px rgba(15,23,42,.04);
+  --f-ui:"Plus Jakarta Sans","Noto Sans JP","Hiragino Sans",system-ui,sans-serif;
+  --f-num:"Plus Jakarta Sans",system-ui,sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1018; --card:#151c27; --ink:#f1f5f9; --sub:#a3b1c4; --line:#2b3545; --hover:#252c48; --soft:#1b2330;
+  --accent:#a5b4fc; --accent-ink:#0b1018;
+  --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --b-jinzai:#60a5fa; --b-event:#2dd4bf; --b-estate:#fbbf24; --b-school:#a78bfa; --b-beauty:#f472b6; --b-circle:#fb923c;
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1018; --card:#151c27; --ink:#f1f5f9; --sub:#a3b1c4; --line:#2b3545; --hover:#252c48; --soft:#1b2330;
+  --accent:#a5b4fc; --accent-ink:#0b1018;
+  --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --b-jinzai:#60a5fa; --b-event:#2dd4bf; --b-estate:#fbbf24; --b-school:#a78bfa; --b-beauty:#f472b6; --b-circle:#fb923c;
+  --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.65;margin:0;-webkit-font-smoothing:antialiased}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.35;font-weight:700;letter-spacing:-.005em}
+h1{font-size:22px} h2{font-size:16px} h3{font-size:13px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:inherit}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* shell */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100%}
+.side{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100vh - env(safe-area-inset-top,0px));border-right:1px solid var(--line);background:var(--card);padding:20px 12px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand b{font-weight:800;font-size:15px;letter-spacing:.01em;line-height:1.2}
+.brand small{display:block;color:var(--sub);font-size:11px;font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--sub);font-weight:600;font-size:13.5px}
+.nav a:hover{background:var(--soft);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--hover);color:var(--accent)}
+.nav .badge{margin-left:auto;min-width:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;text-align:center;font-family:var(--f-num);font-weight:700}
+.side .foot{margin-top:auto;padding:0 8px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--sub)}
+.content{min-width:0;padding-block:28px 64px;padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px));max-width:1240px;width:100%}
+.bnav{display:none}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .content{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px calc(84px + env(safe-area-inset-bottom,0px))}
+  .bnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--card);border-top:1px solid var(--line);
+    padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+  .bnav a{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--sub);text-decoration:none;padding:4px 0;position:relative}
+  .bnav a[aria-current="page"]{color:var(--accent)}
+  .bnav .badge{position:absolute;top:0;left:calc(50% + 6px);min-width:16px;padding:0 4px;border-radius:999px;background:var(--bad);color:#fff;font-size:10px;line-height:16px;text-align:center}
+  .mtop{display:flex!important}
+}
+.mtop{display:none;align-items:center;gap:10px;margin-bottom:14px}
+.pagehead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.pagehead p{margin:2px 0 0;color:var(--sub);font-size:13px}
+
+/* generic */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:16px;align-items:start}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.muted{color:var(--sub)} .small{font-size:12px}
+.hint{color:var(--sub);font-size:12px;margin:4px 0 0}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--sub);text-transform:uppercase}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px;text-decoration:none;line-height:1.3}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.line{background:#06c755;border-color:#06c755;color:#fff}
+.btn.warnb{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));color:var(--bad)}
+.btn.sm{padding:3px 9px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+input[type=text],input[type=date],input[type=number],input[type=datetime-local],input:not([type]),select,textarea{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 10px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+textarea{resize:vertical;line-height:1.6}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub);font-weight:600;min-width:0}
+label.f > *{color:var(--ink);font-weight:400;font-size:14px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:600;background:var(--soft);white-space:nowrap;text-decoration:none}
+.biz{color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.biz::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.st{border-radius:999px;font-size:11px;padding:1px 8px;font-weight:700}
+.st.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.st.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.st.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.st.info{color:var(--accent);background:var(--hover)}
+.temp{font-family:var(--f-num);width:22px;height:22px;border-radius:6px;display:inline-grid;place-items:center;font-weight:800;font-size:11px;flex:none}
+.temp.A{color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)} .temp.B{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)} .temp.C{color:var(--sub);background:var(--soft)}
+.notice{border-radius:10px;padding:12px 14px;font-size:13px;background:var(--card);border:1px solid var(--line)}
+.notice.warn{border-color:color-mix(in srgb,var(--warn) 40%,var(--line));background:color-mix(in srgb,var(--warn) 7%,var(--card))}
+.notice.bad{border-color:color-mix(in srgb,var(--bad) 35%,var(--line));background:color-mix(in srgb,var(--bad) 6%,var(--card))}
+.notice.ai{border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--accent) 5%,var(--card))}
+ul.plain{list-style:none;margin:0;padding:0}
+ul.dots{margin:4px 0 0;padding-left:1.2em} ul.dots li{margin:2px 0}
+.empty{color:var(--sub);text-align:center;padding:32px 12px;border:1px dashed var(--line);border-radius:var(--r);background:var(--card)}
+.sec-title{display:flex;align-items:baseline;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.sec-title .muted{font-size:12px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+@media (max-width:520px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow);min-width:0}
+.kpi .lab{font-size:12px;color:var(--sub);font-weight:600}
+.kpi .val{font-family:var(--f-num);font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.kpi .val small{font-size:14px;color:var(--sub);font-weight:600;letter-spacing:0}
+.bar{position:relative;height:6px;border-radius:3px;background:var(--soft)}
+.bar > i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent)}
+.bar > b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.35;border-radius:1px}
+.pace{font-size:11px;font-weight:700;border-radius:999px;padding:0 7px}
+.pace.ahead{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)} .pace.behind{color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)} .pace.even{color:var(--sub);background:var(--soft)}
+
+/* todo */
+.todo li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.todo li:first-child{border-top:0;padding-top:0}
+.todo .when{flex:none;width:62px;font-size:12px;font-weight:700;font-family:var(--f-num)}
+.todo .when.late{color:var(--bad)} .todo .when.today{color:var(--warn)}
+.todo .body{flex:1;min-width:0}
+.todo .who{font-weight:700;text-decoration:none}
+.todo .who:hover{color:var(--accent)}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{padding:9px 8px;text-align:center;border-top:1px solid var(--line)}
+.tbl th{font-size:11px;color:var(--sub);font-weight:700;border-top:0;letter-spacing:.03em}
+.tbl td:first-child,.tbl th:first-child{text-align:left}
+.tbl td .n{font-family:var(--f-num);font-weight:700;font-size:15px;display:inline-block;min-width:28px;padding:2px 6px;border-radius:6px;text-decoration:none}
+.tbl td a .n:hover{background:var(--hover);color:var(--accent)}
+.tbl td .n.z{color:var(--line)}
+.scroll-x{overflow-x:auto}
+
+/* heatmap */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.cal .dow{font-size:11px;color:var(--sub);text-align:center;font-weight:600}
+.cal .d{aspect-ratio:1.5;border-radius:7px;background:var(--soft);display:flex;flex-direction:column;justify-content:space-between;padding:3px 6px;font-size:10px;color:var(--sub);font-family:var(--f-num)}
+.cal .d b{font-size:14px;color:var(--ink);align-self:flex-end;font-weight:700}
+.cal .d.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal .d.l1{background:color-mix(in srgb,var(--accent) 16%,var(--card))}
+.cal .d.l2{background:color-mix(in srgb,var(--accent) 36%,var(--card))}
+.cal .d.l3{background:color-mix(in srgb,var(--accent) 70%,var(--card))}
+.cal .d.l3, .cal .d.l3 b{color:var(--accent-ink)}
+
+/* list */
+.filters{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:8px;margin-bottom:12px}
+@media (max-width:640px){.filters{grid-template-columns:1fr 1fr}.filters > :first-child{grid-column:1/-1}}
+.plist{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.prow{display:grid;grid-template-columns:40px minmax(0,1.3fr) minmax(0,1.6fr) minmax(0,1.3fr);gap:14px;align-items:center;padding:12px 16px;text-decoration:none;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow:hover{background:var(--soft)}
+.prow .nm{font-weight:700;font-size:14.5px}
+.prow .bz{display:flex;flex-wrap:wrap;gap:4px}
+@media (max-width:760px){.prow{grid-template-columns:36px minmax(0,1fr)}.prow > :nth-child(n+3){grid-column:2}}
+
+/* person */
+.ptop{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.ptop h1{font-size:22px}
+.biztable{display:flex;flex-direction:column}
+.bizrow{display:grid;grid-template-columns:100px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.bizrow:first-child{border-top:0;padding-top:0}
+.bizrow .bn{display:flex;flex-direction:column;gap:2px;line-height:1.3}
+.bizrow .bn small{color:var(--sub);font-size:11px}
+.bizrow .fit{grid-column:1/-1;font-size:12px;color:var(--sub)}
+@media (max-width:520px){.bizrow{grid-template-columns:1fr 1fr}.bizrow .bn{grid-column:1/-1;flex-direction:row;gap:8px;align-items:center}}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--sub);font-weight:600;font-size:12px;padding-top:1px}
+.kv dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.tl{position:relative;padding-left:18px}
+.tl::before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:1px;background:var(--line)}
+.tl li{position:relative;padding:6px 0}
+.tl li::before{content:"";position:absolute;left:-17px;top:13px;width:9px;height:9px;border-radius:50%;background:var(--card);border:2px solid var(--c,var(--sub))}
+.tl .meta{font-size:12px;color:var(--sub)}
+.tl .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.preview{border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:var(--r);padding:16px;background:color-mix(in srgb,var(--accent) 4%,var(--card))}
+.preview .blk{padding:9px 0;border-top:1px solid var(--line)}
+.preview label.ck{display:flex;gap:8px;align-items:center;font-weight:700}
+.ailabel{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--accent);background:var(--hover);border-radius:999px;padding:1px 8px}
+.ailabel svg.i{width:12px;height:12px}
+.ring{flex:none}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-weight:600;font-size:13px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.sample-tag{font-size:10px;padding:0 6px;border-radius:4px;background:var(--soft);color:var(--sub);font-weight:700;margin-left:6px;vertical-align:middle}
+
+/* LINE */
+.linebox{background:color-mix(in srgb,#06c755 7%,var(--card));border:1px solid color-mix(in srgb,#06c755 30%,var(--line));border-radius:var(--r);padding:14px;min-width:0}
+.linebox textarea{background:var(--card);font-size:13px}
+.ho{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.ho:first-child{border-top:0;padding-top:0}
+.ho .t{font-weight:700}
+summary{cursor:pointer}
+code{font-size:12px;background:var(--soft);border-radius:4px;padding:0 4px}
+@media (prefers-reduced-motion:no-preference){.btn,.nav a,.prow{transition:background .16s,color .16s,border-color .16s}}
+</style>
+
+<div class="app">
+  <aside class="side" aria-label="メニュー">
+    <div class="brand"><span class="logo"></span><div><b>ONE CIRCLE</b><small>人脈ノート</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot" id="meBox"></div>
+  </aside>
+  <div class="content">
+    <div class="mtop"><span class="logo"></span><div><b style="font-weight:800">ONE CIRCLE</b> <span class="muted small">人脈ノート</span></div></div>
+    <div id="banner"></div>
+    <main id="main"><div class="empty">読み込み中…</div></main>
+  </div>
+</div>
+<nav class="bnav" id="bnav" aria-label="メニュー"></nav>
+<div class="toast" id="toast" hidden></div>
+<script type="application/json" id="boot">__BOOT__</script>
+<script>
+/* ============ 定数・設定 ============ */
+const PHASES = {none:"未提案", proposed:"提案", connected:"つないだ", won:"成立", ended:"終了", lost:"見送り"};
+const PHASE_RANK = {none:0,lost:0,proposed:1,connected:2,won:3,ended:3};
+const DEFAULT_BIZ = [
+  {key:"jinzai", name:"人材", color:"--b-jinzai", entry:"昼の仕事を探している／職場を変えたい／地方から働きたい", reward:"紹介1人につき月2万円（稼働中は毎月）。2027年1月開始",
+   statuses:[["未提案","none"],["提案済","proposed"],["面談・調整中","connected"],["稼働中","won"],["稼働終了","ended"],["見送り","lost"]]},
+  {key:"event", name:"イベント", color:"--b-event", entry:"有名になりたい／イベントに出たい・作りたい", reward:"キャンプ参加者の紹介1名につき3万円。次回MASHUPは2027年4月頃",
+   statuses:[["未提案","none"],["提案済","proposed"],["担当につないだ","connected"],["キャンプ参加","won"],["出演・制作参加","won"],["見送り","lost"]]},
+  {key:"estate", name:"不動産", color:"--b-estate", entry:"引っ越したい／更新で家賃が上がる／上京したい", reward:"紹介が成約で1件3〜5万円。紹介者が最後まで担当してよい",
+   statuses:[["未提案","none"],["提案済","proposed"],["内見・調整中","connected"],["成約","won"],["見送り","lost"]]},
+  {key:"school", name:"スクール", color:"--b-school", entry:"スキルを上げたい／学び直したい／自分の名前で稼ぎたい", reward:"紹介報酬は未発表",
+   statuses:[["未提案","none"],["提案済","proposed"],["体験・説明","connected"],["在籍","won"],["退会","ended"],["見送り","lost"]]},
+  {key:"beauty", name:"美容", color:"--b-beauty", entry:"肌・体調・睡眠の悩み", reward:"流通（販売実績）に応じて",
+   statuses:[["未提案","none"],["提案済","proposed"],["体験・説明","connected"],["購入","won"],["継続","won"],["見送り","lost"]]},
+  {key:"circle", name:"サークル", color:"--b-circle", entry:"居場所がほしい／人と会いたい／運動不足／何か始めたい", reward:"紹介報酬なし。6事業の最初の入口。2027年1月開始",
+   statuses:[["未提案","none"],["提案済","proposed"],["体験予定","connected"],["初参加","won"],["継続参加","won"],["見送り","lost"]]},
+];
+const DEFAULT_KINDS = [["転職面談","jinzai"],["代理店説明","jinzai"],["イベント面談","event"],["キャンプ説明","event"],["住まい相談","estate"],["スクール説明","school"],["美容カウンセリング","beauty"],["サークル体験","circle"],["PG",""]];
+const DEFAULT_TEMPLATE = `【NA氏名🔵】
+{氏名}
+
+【研修項目🔵】
+{面談の種類}
+
+【日付🔵】
+{日付}
+
+【伝えてほしいポイント🔵】
+{伝えてほしいポイント}
+
+【マネージャー氏名🔵】
+{担当者}
+
+【話された内容🔵】
+{話された内容}
+
+【NAからの質問事項🔵】
+{質問事項}
+
+【マネージャーからのフィードバック🔵】
+{フィードバック}
+
+【年齢🔵】
+{年齢}
+
+【関係値🟢】
+{関係値}
+
+【メモ】
+{メモ}`;
+const PLACEHOLDERS = ["氏名","面談の種類","日付","伝えてほしいポイント","担当者","話された内容","質問事項","フィードバック","年齢","関係値","メモ","事業"];
+const METRICS = [
+  {key:"contact", label:"接触", desc:"連絡・会話"},
+  {key:"meeting", label:"面談", desc:"じっくり聞いた"},
+  {key:"propose", label:"提案", desc:"事業を渡した"},
+  {key:"connect", label:"つなぎ", desc:"担当につないだ"},
+  {key:"won", label:"成立", desc:"利用開始・成約"},
+  {key:"new", label:"新規リスト", desc:"追加した人"},
+];
+const LOG_TYPES = {contact:"連絡", meeting:"面談", propose:"提案", connect:"つなぎ", won:"成立", report:"戻す（結果報告）", new:"リスト追加", note:"メモ", action:"アクション完了"};
+const PHASE_TO_LOG = {proposed:"propose", connected:"connect", won:"won"};
+const PROFILE_FIELDS = [["age","年齢"],["job","仕事・活動"],["area","住まい・地域"],["family","家族・暮らし"],["hobbies","趣味・好き"],["personality","人柄"],["relation","出会い・関係"],["referrer","紹介者"],["sns","SNS・連絡先"]];
+const ICONS = {
+  home:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  list:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  share:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+  goals:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  team:'<path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3"/><path d="m16 7 3 3"/>',
+};
+const icon = (k,cls="i") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>`;
+
+/* ============ 状態 ============ */
+const S = {
+  people:new Map(), logs:[], handoffs:[], config:{}, loaded:{people:false,logs:false,config:false,handoffs:false},
+  db:null, sample:null, canWrite:true, mode:"loading",
+  d:{}, ai:{}, ui:{filters:{q:"",biz:"",temp:"",phase:""}, editProfile:null, confirm:null, shareSel:null, goalMonth:null, hoId:null, hoOpen:false},
+};
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const monthKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+const md = s => s ? `${+s.slice(5,7)}/${+s.slice(8,10)}` : "";
+const mdt = s => s ? md(s) + (s.length>10 ? " " + s.slice(11,16) : "") : "";
+const daysBetween = (a,b) => Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00"))/864e5);
+const lines = v => Array.isArray(v) ? v : String(v||"").split("\n").map(s=>s.trim()).filter(Boolean);
+const uniq = a => [...new Set(a.filter(Boolean))];
+const biz = () => (Array.isArray(S.config.businesses) && S.config.businesses.length ? S.config.businesses : DEFAULT_BIZ);
+const bizBy = k => biz().find(b=>b.key===k);
+const kinds = () => (Array.isArray(S.config.kinds) && S.config.kinds.length ? S.config.kinds : DEFAULT_KINDS);
+const template = () => S.config.lineTemplate || DEFAULT_TEMPLATE;
+const phaseOf = (bk, status) => { const b = bizBy(bk); const s = b && b.statuses.find(x=>x[0]===status); return s ? s[1] : "none"; };
+const goalsFor = mk => (S.config.goals && S.config.goals[mk]) || {};
+const meName = () => S.config.me || "";
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,2400); }
+function draft(key, def=""){ return key in S.d ? S.d[key] : def; }
+function ageBand(a){ const n=parseInt(String(a||"").replace(/[^\d]/g,""),10); if(!n) return String(a||""); return `${Math.floor(n/10)*10}代`; }
+
+/* ============ ストア ============ */
+/* サーバー（Google Apps Script）呼び出し */
+// Apps Script のURL（外部ページから開いたときはここにAPIを送る）
+const API_URL = "https://script.google.com/macros/s/AKfycbxDasyRK0oZbiRBVTc6iGwHykV8mcPqG17GNoHm38xXuvk7muhj9cHxdZS6cvSr6uDv/exec";
+const BOOT = (()=>{
+  try{ return JSON.parse(document.getElementById("boot").textContent); }
+  catch(_){ const q=new URLSearchParams(location.search); return {key:q.get("k")||"", url:location.origin+location.pathname, external:true}; }
+})();
+function call(action, payload){
+  return new Promise((resolve, reject)=>{
+    if(!(window.google && google.script && google.script.run)){
+      fetch(API_URL,{method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({key:BOOT.key||"", action, payload:payload||{}})})
+        .then(r=>r.json()).then(o=> o.ok ? resolve(o.data) : reject({code:o.error}))
+        .catch(e=>reject({code:"network", message:String(e&&e.message||e)}));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(r=>{ let o; try{ o=JSON.parse(r); }catch(_){ reject({code:"bad_response"}); return; } o.ok ? resolve(o.data) : reject({code:o.error}); })
+      .withFailureHandler(e=>reject({code:"network", message:String(e&&e.message||e)}))
+      .api(BOOT.key||"", action, JSON.stringify(payload||{}));
+  });
+}
+const GLOBAL_KEYS = ["businesses","kinds","lineTemplate"];
+const store = {
+  async setPerson(id, data){ S.people.set(id,{id,...data}); render(); await call("savePerson",{person:{id,...data}}); },
+  async updatePerson(id, patch){
+    patch.updatedAt = new Date().toISOString();
+    const p = S.people.get(id); if(!p) return;
+    deepMerge(p, patch); render();
+    await call("savePerson",{person:p});
+  },
+  async deletePerson(id){
+    S.people.delete(id); S.logs=S.logs.filter(l=>l.personId!==id); S.handoffs=S.handoffs.filter(h=>h.personId!==id); render();
+    await call("deletePerson",{id});
+  },
+  async addLog(log){
+    const data = {id:uid(), date:today(), createdAt:new Date().toISOString(), ...log};
+    S.logs.unshift(data); render();
+    await call("addLog",{log:data});
+  },
+  async deleteLog(id){ S.logs=S.logs.filter(l=>l.id!==id); render(); await call("deleteLog",{id}); },
+  async saveHandoff(id, data){
+    data.updatedAt = new Date().toISOString();
+    S.handoffs = [{id,...data}, ...S.handoffs.filter(h=>h.id!==id)]; render();
+    await call("saveHandoff",{handoff:{id,...data}});
+  },
+  async deleteHandoff(id){ S.handoffs=S.handoffs.filter(h=>h.id!==id); render(); await call("deleteHandoff",{id}); },
+  async saveConfig(patch){
+    const g={}, m={};
+    for(const k of Object.keys(patch)) (GLOBAL_KEYS.includes(k)?g:m)[k]=patch[k];
+    if(Object.keys(g).length && !isAdmin()){ toast("事業やフォーマットの設定は管理者だけが変更できます"); return; }
+    deepMerge(S.config, patch); render();
+    if(Object.keys(m).length) await call("saveMine",{patch:m});
+    if(Object.keys(g).length) await call("saveGlobal",{patch:g});
+  },
+};
+const isAdmin = () => S.me && S.me.role==="admin";
+const isLeader = () => S.me && (S.me.role==="leader" || S.me.role==="admin");
+function deepMerge(t, s){ for(const k in s){ if(s[k] && typeof s[k]==="object" && !Array.isArray(s[k])){ t[k]=t[k]&&typeof t[k]==="object"?t[k]:{}; deepMerge(t[k],s[k]); } else t[k]=s[k]; } return t; }
+async function safe(fn, okMsg){
+  try{ await fn(); if(okMsg) toast(okMsg); }
+  catch(e){ console.error(e); toast(e && e.code==="forbidden" ? "この操作をする権限がありません" : "保存できませんでした。通信を確認して「最新にする」を押してください"); }
+}
+
+/* ============ 集計 ============ */
+function monthLogs(mk){ return S.logs.filter(l => (l.date||"").startsWith(mk)); }
+function countMetrics(mk){
+  const c = Object.fromEntries(METRICS.map(m=>[m.key,0]));
+  for(const l of monthLogs(mk)) if(l.type in c) c[l.type]++;
+  return c;
+}
+function paceInfo(mk){
+  const now = new Date(); const [y,m] = mk.split("-").map(Number);
+  const dim = new Date(y,m,0).getDate(); const cur = monthKey(now);
+  const elapsed = mk < cur ? dim : mk > cur ? 0 : now.getDate();
+  return {dim, elapsed, ratio: elapsed/dim, left: dim-elapsed};
+}
+function openActions(){
+  const out=[];
+  for(const p of S.people.values()) for(const a of (p.actions||[])) if(!a.done) out.push({p,a});
+  return out.sort((x,y)=>(x.a.due||"9999").localeCompare(y.a.due||"9999"));
+}
+function followUps(){
+  const out=[]; const t=today();
+  for(const p of S.people.values()) for(const b of biz()){
+    const st = p.biz && p.biz[b.key]; if(!st) continue;
+    const ph = phaseOf(b.key, st.status);
+    if((ph==="proposed"||ph==="connected") && st.updatedAt){
+      const d = daysBetween(st.updatedAt.slice(0,10), t);
+      if(d>=7) out.push({p,b,st,days:d,ph});
+    }
+  }
+  return out.sort((a,b)=>b.days-a.days);
+}
+function hoStatus(h){
+  if(h.talked && h.talked.trim()) return {k:"done", t:"戻し済み", c:"ok"};
+  if(h.status!=="sent") return {k:"draft", t:"下書き", c:"info"};
+  if(h.datetime && h.datetime.slice(0,10) < today()) return {k:"back", t:"結果を戻す", c:"bad"};
+  return {k:"sent", t:"送信済み・面談待ち", c:"warn"};
+}
+function hoBacklog(){ return S.handoffs.filter(h=>hoStatus(h).k==="back" && S.people.has(h.personId)); }
+function needsSummary(){ return [...S.people.values()].filter(p => S.logs.some(l=>l.personId===p.id && l.type==="meeting") && !(p.talkPoints||[]).length); }
+function lastTouch(p){ const l = S.logs.find(l=>l.personId===p.id); return l ? l.date : (p.createdAt||"").slice(0,10); }
+function alertCount(){ const t=today(); return openActions().filter(x=>x.a.due && x.a.due<=t).length + followUps().length + hoBacklog().length; }
+
+/* ============ 部品 ============ */
+function ring(p, size=36){
+  const bs = biz(); const n = bs.length; const r = size/2-3; const c = size/2; const gap = 0.16;
+  let s = `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">`;
+  bs.forEach((b,i)=>{
+    const a0 = (i/n)*2*Math.PI - Math.PI/2 + gap/2, a1 = ((i+1)/n)*2*Math.PI - Math.PI/2 - gap/2;
+    const st = p && p.biz && p.biz[b.key]; const ph = st ? phaseOf(b.key, st.status) : "none";
+    const op = {none:.14,proposed:.45,connected:.72,won:1,ended:.32,lost:.14}[ph];
+    const x0=c+r*Math.cos(a0), y0=c+r*Math.sin(a0), x1=c+r*Math.cos(a1), y1=c+r*Math.sin(a1);
+    s += `<path d="M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" fill="none" stroke="var(${b.color})" stroke-opacity="${op}" stroke-width="${size>40?5.5:4}" stroke-linecap="round"/>`;
+  });
+  return s + `</svg>`;
+}
+const fullRing = size => ring({biz:Object.fromEntries(biz().map(b=>[b.key,{status:(b.statuses.find(s=>s[1]==="won")||[])[0]}]))}, size);
+function bizChip(bk, label){ const b=bizBy(bk); if(!b) return ""; return `<span class="chip biz" style="--c:var(${b.color})">${esc(b.name)}${label?`・${esc(label)}`:""}</span>`; }
+function tempChip(t){ return t ? `<span class="temp ${esc(t)}" title="温度感">${esc(t)}</span>` : `<span class="temp C" title="温度感 未設定">–</span>`; }
+function activeBizChips(p){
+  return biz().map(b=>{ const st=p.biz&&p.biz[b.key]; if(!st) return ""; const ph=phaseOf(b.key,st.status); if(ph==="none") return ""; return bizChip(b.key, st.status); }).join("");
+}
+function nameOf(p){ return esc(p.name||"（名前なし）") + (p.sample?`<span class="sample-tag">サンプル</span>`:""); }
+function dueLabel(due){
+  if(!due) return {t:"期限なし",c:""};
+  const d = daysBetween(today(), due);
+  if(d<0) return {t:`${-d}日超過`,c:"late"};
+  if(d===0) return {t:"今日",c:"today"};
+  if(d===1) return {t:"明日",c:""};
+  return {t:md(due),c:""};
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); toast("コピーしました"); return true; }
+  catch(e){
+    try{
+      const ta=document.createElement("textarea"); ta.value=text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select(); const ok=document.execCommand("copy"); ta.remove();
+      if(ok){ toast("コピーしました"); return true; }
+    }catch(_){}
+    toast("コピーできませんでした。テキストを選択してコピーしてください"); return false;
+  }
+}
+const head = (title, sub, right="") => `<div class="pagehead"><div><h1>${title}</h1>${sub?`<p>${sub}</p>`:""}</div><div class="row">${right}</div></div>`;
+
+/* ============ ルーティング・描画 ============ */
+function route(){ const h=(location.hash||"#home").slice(1); if(h.startsWith("person-")) return {name:"person", id:h.slice(7)}; return {name:["home","list","share","goals","new","team","members"].includes(h)?h:"home"}; }
+let pendingRender=false;
+function typing(){ const a=document.activeElement; return a && $("#main").contains(a) && (a.tagName==="TEXTAREA" || (a.tagName==="INPUT" && !["checkbox","radio","button"].includes(a.type))); }
+function requestRender(){ if(typing()){ pendingRender=true; return; } render(); }
+document.addEventListener("focusout",()=>setTimeout(()=>{ if(pendingRender && !typing()){ pendingRender=false; render(); } },60));
+
+function render(){
+  const r = route();
+  const main = $("#main");
+  if(S.mode!=="ready"){
+    $("#nav").innerHTML=""; $("#bnav").innerHTML=""; $("#banner").innerHTML="";
+    document.querySelectorAll(".logo").forEach(el=>el.innerHTML = fullRing(30));
+    main.innerHTML = S.mode==="loading" ? `<div class="empty">読み込み中…</div>`
+      : S.mode==="nokey" ? `<div class="empty"><b>このリンクでは開けません</b><p>個人用のURL（末尾に ?k= が付いたもの）で開いてください。分からないときは管理者に聞いてください。</p></div>`
+      : S.mode==="offline" ? `<div class="empty">このページは Google Apps Script のウェブアプリとして開いたときに動きます。</div>`
+      : `<div class="empty">読み込めませんでした。<br><button class="btn" data-act="reload" style="margin-top:10px">もう一度読み込む</button></div>`;
+    return;
+  }
+  const ac = alertCount(); const hb = hoBacklog().length;
+  const items = [["home","ダッシュボード","home",ac],["list","リスト","list",0],["share","リーダー共有","share",hb],["goals","目標・行動量","goals",0]];
+  if(isLeader()) items.push(["team","チーム","team",0]);
+  const cur = k => r.name===k || (k==="list"&&(r.name==="person"||r.name==="new"));
+  $("#nav").innerHTML = items.map(([k,l,ic,b])=>`<a href="#${k}" ${cur(k)?'aria-current="page"':""}>${icon(ic)}${l}${b?`<span class="badge">${b}</span>`:""}</a>`).join("")
+    + (S.canWrite?`<a href="#new" ${r.name==="new"?'aria-current="page"':""} style="margin-top:8px">${icon("plus")}人を追加</a>`:"")
+    + (isAdmin()?`<a href="#members" ${r.name==="members"?'aria-current="page"':""}>${icon("key")}メンバー管理</a>`:"");
+  $("#bnav").style.gridTemplateColumns = `repeat(${items.length},1fr)`;
+  $("#bnav").innerHTML = items.map(([k,l,ic,b])=>`<a href="#${k}" ${cur(k)?'aria-current="page"':""}>${icon(ic)}<span>${l.replace("・行動量","")}</span>${b?`<span class="badge">${b}</span>`:""}</a>`).join("");
+  document.querySelectorAll(".logo").forEach(el=>el.innerHTML = fullRing(30));
+  if(!(document.activeElement && document.activeElement.id==="meName")){
+    $("#meBox").innerHTML = (S.canWrite
+      ? `<label class="f">あなたの名前<input id="meName" type="text" value="${esc(draft("me", meName()||S.me.name))}" placeholder="共有メモに入ります"></label>`
+      : `<span>閲覧中：<b>${esc(S.target.name)}</b></span>`)
+      + `<div class="row"><button class="btn sm" data-act="reload">最新にする</button>${S.viewingOther?`<button class="btn sm" data-act="viewSelf">自分に戻る</button>`:""}</div>`;
+  }
+  let ban = "";
+  if(S.viewingOther) ban += `<div class="notice" style="margin-bottom:16px"><b>${esc(S.target.name)}</b> さんのノートを閲覧中です（編集はできません）。 <button class="btn sm" data-act="viewSelf">自分のノートに戻る</button></div>`;
+  $("#banner").innerHTML = ban;
+  if(r.name==="team" && !isLeader()){ main.innerHTML=`<div class="empty">リーダーだけが見られるページです。</div>`; return; }
+  if(r.name==="members" && !isAdmin()){ main.innerHTML=`<div class="empty">管理者だけが見られるページです。</div>`; return; }
+  main.innerHTML = r.name==="home"?vHome() : r.name==="list"?vList() : r.name==="person"?vPerson(r.id) : r.name==="new"?vNew() : r.name==="share"?vShare() : r.name==="team"?vTeam() : r.name==="members"?vMembers() : vGoals();
+}
+window.addEventListener("hashchange",()=>{ S.ui.editProfile=null; S.ui.confirm=null; S.ui.newMember=null; if(route().name==="team") S.team=null; render(); window.scrollTo(0,0); });
+
+/* ============ ダッシュボード ============ */
+function kpiTiles(mk){
+  const c = countMetrics(mk), g = goalsFor(mk), pi = paceInfo(mk);
+  return `<div class="kpis">` + METRICS.map(m=>{
+    const v=c[m.key], goal=+g[m.key]||0;
+    let pace="";
+    if(goal){
+      const diff = Math.round(v-goal*pi.ratio);
+      pace = v>=goal ? `<span class="pace ahead">達成</span>` : diff>0?`<span class="pace ahead">+${diff}</span>` : diff<0?`<span class="pace behind">${diff}</span>`:`<span class="pace even">±0</span>`;
+    }
+    return `<div class="kpi"><div class="between"><span class="lab">${m.label}</span>${pace}</div>
+      <div class="val">${v}${goal?`<small> / ${goal}</small>`:""}</div>
+      ${goal?`<div class="bar"><i style="width:${Math.min(100,v/goal*100)}%"></i><b style="left:${(pi.ratio*100).toFixed(1)}%" title="今日時点の目標ペース"></b></div>`:`<div class="hint" style="margin:0">目標未設定</div>`}
+    </div>`;
+  }).join("") + `</div>`;
+}
+function vHome(){
+  const mk = monthKey(new Date()), pi = paceInfo(mk), t = today();
+  const acts = openActions(); const late = acts.filter(x=>x.a.due && x.a.due<=t); const soon = acts.filter(x=>x.a.due && x.a.due>t && daysBetween(t,x.a.due)<=3);
+  const fu = followUps(); const ns = needsSummary(); const hb = hoBacklog();
+  const people = [...S.people.values()];
+  const hd = head(`${+mk.slice(5)}月のダッシュボード`, `${pi.elapsed}日経過・残り${pi.left}日。タイルの縦線は今日時点の目標ペース`, S.canWrite?`<a class="btn" href="#goals">目標を設定</a><a class="btn pri" href="#new">${icon("plus")}人を追加</a>`:"");
+  if(!people.length) return `${hd}<div class="stack">${kpiTiles(mk)}<div class="empty"><p>まだ誰も登録されていません。</p>${S.canWrite?`<a class="btn pri" href="#new">最初の1人を追加</a>`:""}</div></div>`;
+  const todo = [
+    ...hb.map(h=>({kind:"ho",h,p:S.people.get(h.personId)})), ...late.map(x=>({kind:"act",...x})), ...fu.map(x=>({kind:"fu",...x})), ...soon.map(x=>({kind:"act",...x})),
+  ];
+  const todoHtml = todo.length ? `<ul class="plain todo">` + todo.slice(0,12).map(x=>{
+    if(x.kind==="ho") return `<li><span class="when late">${md(x.h.datetime)}</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${esc(x.h.kind||"面談")}が終わりました。内容を聞いて「戻す」</div><button class="btn sm" data-act="openHo" data-hid="${x.h.id}">記入</button></li>`;
+    if(x.kind==="act"){ const dl=dueLabel(x.a.due);
+      return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${esc(x.a.text)}</div>${S.canWrite?`<button class="btn sm" data-act="doneAction" data-pid="${x.p.id}" data-aid="${x.a.id}">完了</button>`:""}</li>`; }
+    return `<li><span class="when late">${x.days}日</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${bizChip(x.b.key,x.st.status)} のまま動きなし。結果を聞いて「戻す」</div></li>`;
+  }).join("") + `</ul>` : `<p class="muted" style="margin:0">期限が近いアクションはありません。</p>`;
+  const cols = ["proposed","connected","won","ended","lost"];
+  const pipe = `<div class="scroll-x"><table class="tbl"><thead><tr><th>事業</th>${cols.map(c=>`<th>${PHASES[c]}</th>`).join("")}</tr></thead><tbody>` +
+    biz().map(b=>{
+      const cnt = {proposed:0,connected:0,won:0,ended:0,lost:0};
+      for(const p of people){ const st=p.biz&&p.biz[b.key]; if(st){ const ph=phaseOf(b.key,st.status); if(ph in cnt) cnt[ph]++; } }
+      return `<tr><td>${bizChip(b.key)}</td>${cols.map(c=>`<td><a href="#list" data-act="filterTo" data-biz="${b.key}" data-phase="${c}" style="text-decoration:none"><span class="n ${cnt[c]?"":"z"}">${cnt[c]}</span></a></td>`).join("")}</tr>`;
+    }).join("") + `</tbody></table></div>`;
+  return `${hd}<div class="stack">
+    ${kpiTiles(mk)}
+    ${ns.length?`<div class="notice ai"><span class="ailabel">${icon("spark")} AI</span> <b>面談の解析がまだの人が${ns.length}人います。</b>文字起こしを貼ると、伝える内容と次のアクションが入ります。<div class="row" style="margin-top:8px">${ns.slice(0,6).map(p=>`<a class="chip" href="#person-${p.id}">${nameOf(p)}</a>`).join("")}</div></div>`:""}
+    <div class="grid2">
+      <section class="card"><div class="sec-title"><h2>今やること</h2><span class="muted">期限切れ・今日・3日以内・戻す漏れ</span></div>${todoHtml}</section>
+      <section class="card"><div class="sec-title"><h2>事業別パイプライン</h2><span class="muted">数字を押すと一覧へ</span></div>${pipe}
+        <p class="hint">「提案・つないだ」のまま7日動きがないと、今やることに「戻す」が出ます。</p></section>
+    </div>
+    <section class="card"><div class="sec-title"><h2>行動カレンダー</h2><span class="muted">日ごとの記録件数</span></div>${heatmap(mk)}</section>
+  </div>`;
+}
+function heatmap(mk){
+  const [y,m]=mk.split("-").map(Number); const first=new Date(y,m-1,1); const dim=new Date(y,m,0).getDate();
+  const cnt={}; for(const l of monthLogs(mk)) if(l.type!=="note") cnt[l.date]=(cnt[l.date]||0)+1;
+  let h = `<div class="cal">` + ["日","月","火","水","木","金","土"].map(d=>`<div class="dow">${d}</div>`).join("");
+  for(let i=0;i<first.getDay();i++) h+=`<div></div>`;
+  const t=today();
+  for(let d=1; d<=dim; d++){
+    const k=`${mk}-${pad(d)}`; const n=cnt[k]||0; const lv = n===0?"":n<3?"l1":n<6?"l2":"l3";
+    h += `<div class="d ${lv} ${k===t?"today":""}" title="${md(k)}：${n}件"><span>${d}</span>${n?`<b>${n}</b>`:""}</div>`;
+  }
+  return h + `</div>`;
+}
+
+/* ============ リスト ============ */
+function vList(){
+  const f = S.ui.filters;
+  let ps = [...S.people.values()];
+  if(f.q){ const q=f.q.toLowerCase(); ps=ps.filter(p=>JSON.stringify([p.name,p.kana,p.profile,p.memo,p.needs,p.frustrations]).toLowerCase().includes(q)); }
+  if(f.temp) ps = ps.filter(p=>p.temp===f.temp);
+  if(f.biz) ps = ps.filter(p=>{ const st=p.biz&&p.biz[f.biz]; const ph=st?phaseOf(f.biz,st.status):"none"; return f.phase ? ph===f.phase : ph!=="none"; });
+  else if(f.phase) ps = ps.filter(p=>biz().some(b=>{ const st=p.biz&&p.biz[b.key]; return st && phaseOf(b.key,st.status)===f.phase; }));
+  const nextDue = p => ((p.actions||[]).filter(a=>!a.done).map(a=>a.due||"9999").sort()[0]) || "9999";
+  ps.sort((a,b)=>nextDue(a).localeCompare(nextDue(b)) || lastTouch(b).localeCompare(lastTouch(a)));
+  const rows = ps.map(p=>{
+    const na = (p.actions||[]).filter(a=>!a.done).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"))[0];
+    const dl = na && dueLabel(na.due); const pr=p.profile||{};
+    return `<a class="prow" href="#person-${p.id}">
+      ${ring(p,34)}
+      <div><div class="row" style="gap:6px">${tempChip(p.temp)}<span class="nm">${nameOf(p)}</span></div><div class="muted small">${esc([pr.job,pr.area].filter(Boolean).join("・")||"プロフィール未入力")}</div></div>
+      <div class="bz">${activeBizChips(p)||`<span class="muted small">まだ事業を渡していません</span>`}</div>
+      <div class="small">${na?`<b style="color:${dl.c==="late"?"var(--bad)":dl.c==="today"?"var(--warn)":"inherit"}">${dl.t}</b>　${esc(na.text)}`:`<span class="muted">次のアクションなし</span>`}<div class="muted">最終接点 ${md(lastTouch(p))||"—"}</div></div>
+    </a>`;
+  }).join("");
+  return `${head("リスト", `${ps.length} / ${S.people.size}人。リングは6事業の進み具合（濃いほど進んでいる）`, S.canWrite?`<a class="btn pri" href="#new">${icon("plus")}人を追加</a>`:"")}
+    <div class="filters">
+      <input id="fq" type="text" placeholder="名前・仕事・ニーズで検索" value="${esc(f.q)}" data-filter="q">
+      <select id="fbiz" data-filter="biz"><option value="">すべての事業</option>${biz().map(b=>`<option value="${b.key}" ${f.biz===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select>
+      <select id="fphase" data-filter="phase"><option value="">すべての段階</option>${Object.entries(PHASES).filter(([k])=>k!=="none").map(([k,v])=>`<option value="${k}" ${f.phase===k?"selected":""}>${v}</option>`).join("")}</select>
+      <select id="ftemp" data-filter="temp"><option value="">温度感すべて</option>${["A","B","C"].map(t=>`<option ${f.temp===t?"selected":""}>${t}</option>`).join("")}</select>
+    </div>
+    <p class="hint" style="margin:-4px 0 12px">温度感 A＝今すぐ動ける／B＝関心あり／C＝関係づくり中</p>
+    ${rows?`<div class="plist">${rows}</div>`:`<div class="empty">条件に合う人がいません。</div>`}`;
+}
+
+/* ============ 新規追加 ============ */
+function vNew(){
+  if(!S.canWrite) return `<div class="empty">閲覧モードでは追加できません。</div>`;
+  return `${head("人を追加","名前だけでも登録できます。面談後に文字起こしを貼れば残りは自動で埋まります")}
+  <section class="card stack" style="max-width:760px">
+    <div class="fields">
+      <label class="f">名前（必須）<input id="n_name" type="text" data-d="n_name" value="${esc(draft("n_name"))}"></label>
+      <label class="f">ふりがな<input id="n_kana" type="text" data-d="n_kana" value="${esc(draft("n_kana"))}"></label>
+      <label class="f">年齢<input id="n_age" type="text" data-d="n_age" value="${esc(draft("n_age"))}" placeholder="例：24"></label>
+      <label class="f">出会い・関係<input id="n_relation" type="text" data-d="n_relation" value="${esc(draft("n_relation"))}" placeholder="例：SNS／サークルで知り合った"></label>
+      <label class="f">SNS・連絡先<input id="n_sns" type="text" data-d="n_sns" value="${esc(draft("n_sns"))}" placeholder="InstagramのURLなど"></label>
+      <label class="f">紹介者<input id="n_referrer" type="text" data-d="n_referrer" value="${esc(draft("n_referrer"))}"></label>
+      <label class="f">入口の事業<select id="n_entry" data-d="n_entry"><option value="">未定</option>${biz().map(b=>`<option value="${b.key}" ${draft("n_entry")===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
+      <label class="f">温度感<select id="n_temp" data-d="n_temp">${["","A","B","C"].map(t=>`<option value="${t}" ${draft("n_temp")===t?"selected":""}>${t||"未設定"}</option>`).join("")}</select></label>
+    </div>
+    <label class="f">メモ（任意）<textarea id="n_memo" rows="3" data-d="n_memo" placeholder="例：ダンサーとインストラクターをメインで活動">${esc(draft("n_memo"))}</textarea></label>
+    <label class="row small"><input id="n_consent" type="checkbox" data-d="n_consent" ${draft("n_consent")?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
+    <div class="row"><button class="btn pri" data-act="createPerson">追加して開く</button><a class="btn" href="#list">やめる</a></div>
+  </section>`;
+}
+
+/* ============ 人物ページ ============ */
+function vPerson(id){
+  const p = S.people.get(id);
+  if(!p) return `<div class="empty">この人は見つかりません（削除された可能性があります）。<br><a class="btn" href="#list" style="margin-top:10px">リストへ戻る</a></div>`;
+  const logs = S.logs.filter(l=>l.personId===id);
+  const W = S.canWrite; const editing = S.ui.editProfile===id;
+  const prof = editing ? `<div class="stack">
+      <div class="fields">
+        <label class="f">名前<input id="e_name" type="text" data-d="e_name" value="${esc(draft("e_name",p.name))}"></label>
+        <label class="f">ふりがな<input id="e_kana" type="text" data-d="e_kana" value="${esc(draft("e_kana",p.kana))}"></label>
+        ${PROFILE_FIELDS.map(([k,l])=>`<label class="f">${l}<input id="e_${k}" type="text" data-d="e_${k}" value="${esc(draft("e_"+k,(p.profile||{})[k]))}"></label>`).join("")}
+        <label class="f">入口の事業<select id="e_entry" data-d="e_entry"><option value="">未定</option>${biz().map(b=>`<option value="${b.key}" ${draft("e_entry",p.entry)===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
+        <label class="f">温度感<select id="e_temp" data-d="e_temp">${["","A","B","C"].map(t=>`<option value="${t}" ${draft("e_temp",p.temp||"")===t?"selected":""}>${t||"未設定"}</option>`).join("")}</select></label>
+      </div>
+      <label class="f">メモ（LINE共有の【メモ】に入ります）<textarea id="e_memo" rows="2" data-d="e_memo">${esc(draft("e_memo",p.memo||""))}</textarea></label>
+      <label class="f">ニーズ・やりたいこと（1行に1つ）<textarea id="e_needs" rows="3" data-d="e_needs">${esc(draft("e_needs",(p.needs||[]).join("\n")))}</textarea></label>
+      <label class="f">不満・困りごと（1行に1つ）<textarea id="e_frus" rows="3" data-d="e_frus">${esc(draft("e_frus",(p.frustrations||[]).join("\n")))}</textarea></label>
+      <label class="f">伝えると効果的なこと（1行に1つ）<textarea id="e_talk" rows="3" data-d="e_talk">${esc(draft("e_talk",(p.talkPoints||[]).join("\n")))}</textarea></label>
+      <label class="f">避けたほうがいい話（1行に1つ）<textarea id="e_avoid" rows="2" data-d="e_avoid">${esc(draft("e_avoid",(p.avoid||[]).join("\n")))}</textarea></label>
+      <label class="row small"><input id="e_consent" type="checkbox" data-d="e_consent" ${draft("e_consent",!!p.consent)?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
+      <div class="row"><button class="btn pri" data-act="saveProfile" data-pid="${id}">保存</button><button class="btn" data-act="cancelProfile">やめる</button></div>
+    </div>`
+    : `<dl class="kv">
+        ${PROFILE_FIELDS.map(([k,l])=>(p.profile||{})[k]?`<dt>${l}</dt><dd>${esc(p.profile[k])}</dd>`:"").join("")}
+        ${p.memo?`<dt>メモ</dt><dd>${esc(p.memo)}</dd>`:""}
+        <dt>入口の事業</dt><dd>${p.entry?bizChip(p.entry):"未定"}</dd>
+        <dt>本人同意</dt><dd>${p.consent?"伝えている":`<span style="color:var(--warn)">未確認</span>`}</dd>
+      </dl>`;
+  const listBlock = (title, arr, color) => `<div><h3 style="color:${color||"inherit"}">${title}</h3>${(arr||[]).length?`<ul class="dots">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="muted small" style="margin:2px 0">まだありません</p>`}</div>`;
+  const bizRows = biz().map(b=>{
+    const st = (p.biz||{})[b.key] || {}; const fit = (p.fit||{})[b.key];
+    return `<div class="bizrow">
+      <div class="bn">${bizChip(b.key)}${st.updatedAt?`<small>${md(st.updatedAt.slice(0,10))} 更新</small>`:""}</div>
+      ${W?`<select id="bs_${b.key}" data-act="setStatus" data-pid="${id}" data-biz="${b.key}" aria-label="${esc(b.name)}の状況">${b.statuses.map(s=>`<option ${(st.status||b.statuses[0][0])===s[0]?"selected":""}>${esc(s[0])}</option>`).join("")}</select>
+          <input id="bo_${b.key}" type="text" placeholder="つないだ先の担当" value="${esc(draft("bo_"+id+b.key, st.owner))}" data-d="bo_${id}${b.key}" data-act-blur="setOwner" data-pid="${id}" data-biz="${b.key}">`
+        :`<span>${esc(st.status||"未提案")}</span><span class="muted">${esc(st.owner||"")}</span>`}
+      ${fit?`<div class="fit">相性 <b>${esc(fit.level)}</b>：${esc(fit.reason)}</div>`:""}
+    </div>`;
+  }).join("");
+  const acts = (p.actions||[]).filter(a=>!a.done).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
+  const actHtml = `<ul class="plain todo">${acts.map(a=>{ const dl=dueLabel(a.due); return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body">${esc(a.text)}</div>${W?`<button class="btn sm" data-act="doneAction" data-pid="${id}" data-aid="${a.id}">完了</button><button class="btn sm ghost" data-act="dropAction" data-pid="${id}" data-aid="${a.id}" aria-label="削除">×</button>`:""}</li>`; }).join("") || `<li class="muted">次のアクションがありません。1つ決めておくと漏れません。</li>`}</ul>
+    ${W?`<div class="row" style="margin-top:10px"><input id="na_text" type="text" style="flex:2;min-width:160px" placeholder="例：来週の休みを聞いてサークル体験に誘う" data-d="na_${id}" value="${esc(draft("na_"+id))}"><input id="na_due" type="date" style="flex:1;min-width:130px" data-d="nd_${id}" value="${esc(draft("nd_"+id))}"><button class="btn" data-act="addAction" data-pid="${id}">追加</button></div>`:""}`;
+  const tl = logs.length ? `<ul class="plain tl">${logs.slice(0,40).map(l=>{ const b=l.biz&&bizBy(l.biz); return `<li style="--c:${b?`var(${b.color})`:"var(--sub)"}"><div class="meta">${md(l.date)}・<b>${esc(LOG_TYPES[l.type]||l.type)}</b>${b?`・${esc(b.name)}`:""}${W?` <button class="btn sm ghost" style="padding:0 6px" data-act="askDelLog" data-lid="${l.id}">削除</button>`:""}${S.ui.confirm==="log:"+l.id?` <button class="btn sm warnb" data-act="delLog" data-lid="${l.id}">本当に削除</button>`:""}</div>${l.text?`<div class="txt">${esc(l.text)}</div>`:""}</li>`; }).join("")}</ul>` : `<p class="muted" style="margin:0">記録はまだありません。</p>`;
+  const logForm = W?`<div class="stack" style="gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+      <div class="fields"><label class="f">種類<select id="lg_type" data-d="lt_${id}">${["contact","meeting","report","note"].map(k=>`<option value="${k}" ${draft("lt_"+id,"contact")===k?"selected":""}>${LOG_TYPES[k]}</option>`).join("")}</select></label>
+      <label class="f">事業（任意）<select id="lg_biz" data-d="lb_${id}"><option value="">—</option>${biz().map(b=>`<option value="${b.key}" ${draft("lb_"+id)===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
+      <label class="f">日付<input id="lg_date" type="date" data-d="ld_${id}" value="${esc(draft("ld_"+id,today()))}"></label></div>
+      <textarea id="lg_text" rows="2" placeholder="何を話した？結果は？" data-d="lx_${id}">${esc(draft("lx_"+id))}</textarea>
+      <div><button class="btn" data-act="addLog" data-pid="${id}">記録する</button></div></div>`:"";
+  const hos = S.handoffs.filter(h=>h.personId===id);
+  const hoHtml = `<section class="card"><div class="between" style="margin-bottom:12px"><h2>面談につなぐ</h2>${W?`<button class="btn pri sm" data-act="newHo" data-pid="${id}">${icon("share")}LINE共有をつくる</button>`:""}</div>
+    ${hos.length?`<div>${hos.map(h=>{ const s=hoStatus(h); return `<div class="ho"><div><div class="t">${esc(h.kind||"面談")} ${h.biz?bizChip(h.biz):""}</div><div class="muted small">${mdt(h.datetime)||"日時未定"}${h.manager?`・${esc(h.manager)}`:""}</div></div><div class="row"><span class="st ${s.c}">${s.t}</span><button class="btn sm" data-act="openHo" data-hid="${h.id}">開く</button></div></div>`; }).join("")}</div>`
+      :`<p class="muted" style="margin:0">次につなぐ面談（転職面談・体験など）を決めたら、ここからリーダーにLINEで送る文面を作れます。</p>`}</section>`;
+  return `<div class="stack">
+    <div class="between">
+      <div class="ptop">${ring(p,52)}<div><h1>${nameOf(p)}</h1><div class="muted small">${esc(p.kana||"")}${p.kana?"・":""}最終接点 ${md(lastTouch(p))||"—"}・追加 ${md((p.createdAt||"").slice(0,10))}</div></div>${tempChip(p.temp)}</div>
+      <div class="row">${W&&!editing?`<button class="btn" data-act="editProfile" data-pid="${id}">プロフィール編集</button>`:""}<a class="btn" href="#list">← リスト</a></div>
+    </div>
+    ${p.summary?`<div class="notice"><span class="eyebrow">最新の状況</span><div>${esc(p.summary)}</div></div>`:""}
+    <div class="grid2">
+      <div class="stack">
+        <section class="card"><div class="sec-title"><h2>プロフィール</h2></div>${prof}</section>
+        ${editing?"":`<section class="card stack" style="gap:12px"><h2>ニーズと伝えること</h2>
+          ${listBlock("ニーズ・やりたいこと",p.needs)}${listBlock("不満・困りごと",p.frustrations)}
+          ${listBlock("伝えると効果的なこと",p.talkPoints,"var(--ok)")}${listBlock("避けたほうがいい話",p.avoid,"var(--bad)")}</section>`}
+        <section class="card"><div class="sec-title"><h2>6事業の状況</h2><span class="muted">変えると自動で記録・カウント</span></div><div class="biztable">${bizRows}</div></section>
+      </div>
+      <div class="stack">
+        <section class="card"><div class="sec-title"><h2>次のアクション</h2></div>${actHtml}</section>
+        ${hoHtml}
+        ${W?aiPanel(p):""}
+        <section class="card"><div class="sec-title"><h2>記録</h2><span class="muted">${logs.length}件</span></div>${tl}${logForm}</section>
+        ${W?`<section class="card"><div class="between"><span class="muted small">この人をリストから削除（記録・共有文面も消えます）</span>${S.ui.confirm==="person:"+id?`<div class="row"><button class="btn warnb" data-act="delPerson" data-pid="${id}">削除する（元に戻せません）</button><button class="btn" data-act="cancelConfirm">やめる</button></div>`:`<button class="btn sm warnb" data-act="askDelPerson" data-pid="${id}">削除</button>`}</div></section>`:""}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- 文字起こし解析 ---------- */
+const BRIEF = `株式会社AiMの6事業（メンバーは「聞く→渡す→つなぐ→戻す」で動く。自分から売り込まず、相手の困りごとが出てから合う事業を提案する）
+${DEFAULT_BIZ.map(b=>`- ${b.name}(${b.key})：入口の困りごと「${b.entry}」`).join("\n")}
+補足：人材＝昼の仕事（業務委託 月160時間・月25万円〜、18時台終業。今後、正社員・土日のみ・リモートに拡大予定）、代理店＝営業で稼ぐ（月20万円〜）。イベント＝MASHUP（出る・作る・見る）、キャンプ（漢塾・BEAUTY CAMP）。不動産＝賃貸仲介・引っ越し、紹介者が最後まで担当できる。スクール＝Be School（AI・営業・マーケ・SNS・プレゼン等、月8回、学生可）。美容＝フェムテックと睡眠、Nu Skin製品含む。サークル＝大人の部活動（バスケ、フットサル、卓球、サバゲー、キックボクシング、BAR、SNACK）、6事業の最初の入口。1人が複数の事業を順に使う（サークル→イベント→スクール→人材→美容→不動産）。`;
+function analysisPrompt(p, transcript){
+  const cur = {name:p.name, profile:p.profile||{}, needs:p.needs||[], frustrations:p.frustrations||[], temp:p.temp||"", biz:Object.fromEntries(biz().map(b=>[b.key,((p.biz||{})[b.key]||{}).status||"未提案"]))};
+  const statusList = biz().map(b=>`${b.key}: ${b.statuses.map(s=>s[0]).join(" / ")}`).join("\n");
+  return `あなたはAiMのメンバーの人脈リスト整理を手伝います。以下の会話の文字起こしを読み、相手（${p.name}さん）について分析してください。
+
+${BRIEF}
+
+【いま記録されている情報】
+${JSON.stringify(cur)}
+
+【事業ごとに使えるステータス】
+${statusList}
+
+【今日の日付】${today()}
+
+【文字起こし】
+${transcript.slice(0,60000)}
+
+次のJSONオブジェクトだけを返してください（説明文は不要）。文字起こしから読み取れないことは空文字や空配列にしてください。推測で埋めないこと。
+{
+ "summary": "今回の会話で分かった現状を2〜3文で",
+ "profile": {"age":"","job":"","area":"","family":"","hobbies":"","personality":"","relation":""},
+ "needs": ["本人が望んでいること（新しく分かったもの）"],
+ "frustrations": ["不満・困りごと（新しく分かったもの）"],
+ "talkPoints": ["この人に伝えると響く内容を、具体的な言い回しで最大4つ"],
+ "avoid": ["避けたほうがいい話や言い方"],
+ "fit": [{"biz":"事業のkey","level":"高|中|低","reason":"会話のどの発言からそう言えるか"}],
+ "statusUpdates": [{"biz":"事業のkey","status":"上の一覧にあるステータス名"}],
+ "nextActions": [{"text":"次にやること（誰に何をするか具体的に）","due":"YYYY-MM-DD"}],
+ "temp": "A|B|C（A=今すぐ動ける、B=関心あり、C=関係づくり中）"
+}
+statusUpdatesは、会話の中で提案した・つないだ・申し込んだ等がはっきりしている場合だけ入れてください。fitは相性が中以上の事業だけ。nextActionsは1〜3個。`;
+}
+function aiPanel(p){
+  const id=p.id; const st=S.ai[id]||{}; const res = st.result;
+  let body = `<label class="f">面談・通話の文字起こしを貼り付け<textarea id="tr_${id}" rows="${res?3:6}" data-d="tr_${id}" placeholder="Zoom・tl;dv・スマホの文字起こしなど、そのまま貼り付けてOK">${esc(draft("tr_"+id))}</textarea></label>
+    <div class="row" style="align-items:flex-end">
+      <label class="f" style="width:150px">面談日<input id="tr_date" type="date" data-d="trd_${id}" value="${esc(draft("trd_"+id,today()))}"></label>
+      ${S.sample?`<button class="btn pri" data-act="analyze" data-pid="${id}" ${st.busy?"disabled":""}>${icon("spark")}${st.busy?"解析中…":"AIで解析"}</button>`:""}
+      <button class="btn" data-act="copyPrompt" data-pid="${id}">AI用にコピー</button>
+    </div>
+    ${st.msg?`<p class="hint" style="color:var(--bad)">${esc(st.msg)}</p>`:""}
+    ${S.sample?"":`<p class="hint">「AI用にコピー」→ ClaudeなどのAIに貼る → 返ってきた答え（JSON）を下に貼って「読み込む」。</p>`}
+    <details ${S.sample?"":"open"}><summary class="small muted">AIの返答を手で貼る</summary>
+      <textarea id="js_${id}" rows="3" data-d="js_${id}" placeholder='{"summary": ...}' style="margin-top:6px">${esc(draft("js_"+id))}</textarea>
+      <button class="btn sm" data-act="loadJson" data-pid="${id}" style="margin-top:6px">読み込む</button></details>`;
+  if(res) body += previewHtml(p,res);
+  return `<section class="card stack" style="gap:12px"><div class="between"><h2>文字起こしから更新</h2><span class="ailabel">${icon("spark")} AI</span></div><p class="hint" style="margin:-6px 0 0">プロフィール・伝える内容・次のアクションを自動で更新します</p>${body}</section>`;
+}
+function previewHtml(p, r){
+  const ck = (k,l) => `<label class="ck"><input type="checkbox" id="ap_${k}" data-apply="${k}" ${(S.ai[p.id].off||{})[k]?"":"checked"}> ${l}</label>`;
+  const li = a => (a&&a.length)?`<ul class="dots">${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<span class="muted small">なし</span>`;
+  const prof = Object.entries(r.profile||{}).filter(([,v])=>v).map(([k,v])=>`${(PROFILE_FIELDS.find(f=>f[0]===k)||[k,k])[1]}：${v}`);
+  return `<div class="preview">
+    <div class="between"><h3>解析結果の確認</h3><span class="muted small">チェックした項目だけ反映します</span></div>
+    ${r.summary?`<p style="margin:6px 0">${esc(r.summary)}</p>`:""}
+    <div class="blk">${ck("profile","プロフィール")}${li(prof)}</div>
+    <div class="blk">${ck("needs","ニーズ・不満（追記）")}${li([...(r.needs||[]).map(x=>"ニーズ："+x),...(r.frustrations||[]).map(x=>"不満："+x)])}</div>
+    <div class="blk">${ck("talk","伝えると効果的なこと・避けたい話（置き換え）")}${li([...(r.talkPoints||[]),...(r.avoid||[]).map(x=>"✕ "+x)])}</div>
+    <div class="blk">${ck("fit","事業との相性")}${li((r.fit||[]).map(f=>`${(bizBy(f.biz)||{}).name||f.biz}【${f.level}】${f.reason}`))}</div>
+    <div class="blk">${ck("status","事業ステータスの更新")}${li((r.statusUpdates||[]).filter(u=>bizBy(u.biz)).map(u=>`${bizBy(u.biz).name} → ${u.status}`))}</div>
+    <div class="blk">${ck("actions","次のアクションを追加")}${li((r.nextActions||[]).map(a=>`${a.due?md(a.due)+" ":""}${a.text}`))}</div>
+    <div class="blk">${ck("temp","温度感")} ${r.temp?tempChip(r.temp):`<span class="muted small">なし</span>`}</div>
+    <div class="blk">${ck("log","面談として記録（行動量にカウント）")}</div>
+    <div class="row" style="margin-top:8px"><button class="btn pri" data-act="applyAI" data-pid="${p.id}">反映する</button><button class="btn" data-act="discardAI" data-pid="${p.id}">破棄</button></div>
+  </div>`;
+}
+let aiCtl = {};
+const aiErr = e => ({cancelled:"", no_key:"AIのキーが設定されていません。「AI用にコピー」から手動で使えます。", refused:"AIがこの内容への回答を控えました。文面を変えるか、手動で入力してください。", rate_limited:"AIの利用が混み合っています。少し待ってからもう一度押してください。", invalid_json:"AIの返答を読み取れませんでした。もう一度押すか、文字起こしを短くしてください。", prompt_too_large:"文字起こしが長すぎます。半分ずつ解析してください。"}[e && e.code] ?? "AIに接続できませんでした。もう一度お試しください。");
+async function runAnalyze(id){
+  const p=S.people.get(id); const tr=draft("tr_"+id).trim();
+  if(!tr){ S.ai[id]={msg:"文字起こしを貼り付けてください"}; render(); return; }
+  aiCtl[id]?.abort(); aiCtl[id]=new AbortController();
+  S.ai[id]={busy:true}; render();
+  try{
+    const r = await S.sample.json(analysisPrompt(p,tr));
+    if(!r || typeof r!=="object") throw {code:"invalid_json"};
+    S.ai[id]={result:r};
+  }catch(e){
+    if(e.code==="not_granted"||e.code==="sampling_disabled") S.sample=null;
+    S.ai[id]={msg: aiErr(e)};
+  }
+  render();
+}
+async function applyAI(id){
+  const p=S.people.get(id); const r=S.ai[id].result; const off={};
+  document.querySelectorAll("[data-apply]").forEach(el=>{ if(!el.checked) off[el.dataset.apply]=true; });
+  const patch={}; const date=draft("trd_"+id,today());
+  if(r.summary) patch.summary=r.summary;
+  if(!off.profile){ const pr={}; for(const [k,v] of Object.entries(r.profile||{})) if(v && PROFILE_FIELDS.some(f=>f[0]===k)) pr[k]=String(v); if(Object.keys(pr).length) patch.profile=pr; }
+  if(!off.needs){ patch.needs=uniq([...(p.needs||[]),...(r.needs||[])]); patch.frustrations=uniq([...(p.frustrations||[]),...(r.frustrations||[])]); }
+  if(!off.talk){ if((r.talkPoints||[]).length) patch.talkPoints=r.talkPoints.map(String); if((r.avoid||[]).length) patch.avoid=r.avoid.map(String); }
+  if(!off.fit && (r.fit||[]).length){ patch.fit={}; for(const f of r.fit) if(bizBy(f.biz)) patch.fit[f.biz]={level:String(f.level||""),reason:String(f.reason||"")}; }
+  if(!off.temp && ["A","B","C"].includes(r.temp)) patch.temp=r.temp;
+  if(!off.actions && (r.nextActions||[]).length) patch.actions=[...(p.actions||[]), ...r.nextActions.map(a=>({id:uid(),text:String(a.text||""),due:/^\d{4}-\d\d-\d\d$/.test(a.due||"")?a.due:"",done:false}))];
+  await safe(async()=>{
+    await store.updatePerson(id,patch);
+    if(!off.status) for(const u of (r.statusUpdates||[])){ const b=bizBy(u.biz); if(b && b.statuses.some(s=>s[0]===u.status)) await changeStatus(id,u.biz,u.status,date); }
+    if(!off.log) await store.addLog({personId:id,type:"meeting",date,text:r.summary||"面談"});
+  },"反映しました");
+  delete S.ai[id]; delete S.d["tr_"+id]; delete S.d["js_"+id]; render();
+}
+async function changeStatus(id, bk, status, date){
+  const ph = phaseOf(bk,status);
+  await store.updatePerson(id,{biz:{[bk]:{status,updatedAt:new Date().toISOString()}}});
+  await store.addLog({personId:id,type:PHASE_TO_LOG[ph]||"note",biz:bk,date:date||today(),text:`${bizBy(bk).name}：${status}`});
+}
+
+/* ============ LINE共有（つなぎ依頼） ============ */
+const HO_KEYS = ["ho_person","ho_kind","ho_biz","ho_dt","ho_mgr","ho_points","ho_talked","ho_q","ho_fb","ho_age","ho_rel","ho_memo"];
+function hoDefaultsFor(p){
+  const pr=p.profile||{};
+  return {
+    ho_age: ageBand(pr.age),
+    ho_rel: [pr.relation, pr.sns].filter(Boolean).join("\n"),
+    ho_memo: [p.memo, pr.job, pr.personality, pr.hobbies?`趣味：${pr.hobbies}`:"", p.summary].filter(Boolean).join("\n"),
+    ho_points: (p.talkPoints||[]).map(x=>"・"+x).join("\n"),
+  };
+}
+function hoLoad(h, personId){
+  for(const k of HO_KEYS) delete S.d[k];
+  S.ui.hoId = h ? h.id : null; S.ui.hoOpen = true; S.ui.confirm = null;
+  if(h){
+    Object.assign(S.d,{ho_person:h.personId,ho_kind:h.kind||"",ho_biz:h.biz||"",ho_dt:h.datetime||"",ho_mgr:h.manager||"",ho_points:h.points||"",ho_talked:h.talked||"",ho_q:h.questions||"",ho_fb:h.feedback||"",ho_age:h.age||"",ho_rel:h.relation||"",ho_memo:h.memo||""});
+  } else if(personId && S.people.has(personId)){
+    const p=S.people.get(personId);
+    const bk = (biz().find(b=>{const st=(p.biz||{})[b.key];const ph=st&&phaseOf(b.key,st.status);return ph==="proposed"||ph==="connected";})||{}).key||"";
+    const kd = (kinds().find(k=>k[1]===bk)||[""])[0];
+    Object.assign(S.d,{ho_person:personId, ho_biz:bk, ho_kind:kd, ho_mgr:((p.biz||{})[bk]||{}).owner||"", ...hoDefaultsFor(p)});
+  }
+}
+function hoFill(){
+  const p = S.people.get(draft("ho_person"));
+  const b = bizBy(draft("ho_biz"));
+  const v = x => (String(x||"").trim() || "ー");
+  const map = {"氏名":p?p.name:"", "面談の種類":draft("ho_kind"), "日付":mdt(draft("ho_dt")), "伝えてほしいポイント":draft("ho_points"), "担当者":draft("ho_mgr"),
+    "話された内容":draft("ho_talked"), "質問事項":draft("ho_q"), "フィードバック":draft("ho_fb"), "年齢":draft("ho_age"), "関係値":draft("ho_rel"), "メモ":draft("ho_memo"), "事業":b?b.name:""};
+  return template().replace(/\{([^}]+)\}/g,(m,k)=> k in map ? v(map[k]) : m);
+}
+function hoData(){
+  const prev = S.handoffs.find(h=>h.id===S.ui.hoId)||{};
+  return {personId:draft("ho_person"), kind:draft("ho_kind").trim(), biz:draft("ho_biz"), datetime:draft("ho_dt"), manager:draft("ho_mgr").trim(), points:draft("ho_points"),
+    talked:draft("ho_talked"), questions:draft("ho_q"), feedback:draft("ho_fb"), age:draft("ho_age"), relation:draft("ho_rel"), memo:draft("ho_memo"),
+    status:prev.status||"draft", createdAt:prev.createdAt||new Date().toISOString()};
+}
+function pointsPrompt(p, kind, bk, mgr){
+  const b=bizBy(bk);
+  return `あなたはAiMのメンバーが、知り合いを社内の面談につなぐときの「伝えてほしいポイント」を作ります。担当者（マネージャー${mgr?`：${mgr}`:""}）がこれを読んで、面談で何をどう話せばいいかがすぐ分かるようにしてください。
+
+${BRIEF}
+
+【つなぐ面談】${kind||"面談"}${b?`（${b.name}事業）`:""}
+【本人の情報】
+${JSON.stringify({name:p.name, profile:p.profile||{}, memo:p.memo||"", summary:p.summary||"", needs:p.needs||[], frustrations:p.frustrations||[], talkPoints:p.talkPoints||[], avoid:p.avoid||[], temp:p.temp||"", 事業の状況:Object.fromEntries(biz().map(x=>[x.name,((p.biz||{})[x.key]||{}).status||"未提案"]))})}
+
+書き方の例：
+・フリーランスの可能性とわくわく
+→個性の発見から最大化までのビジョンなど
+・〇〇のビジョン
+・プロモーションに繋がりそうでなければイベントに繋いでいただきたいです。
+・〇〇さんのマイストーリー
+・次回面談の日程取り
+
+ルール：
+・「・」で始まる箇条書きを4〜6個。必要なら次の行に「→」で補足
+・この面談（${kind||"面談"}）で、本人のニーズや不満に刺さる話題を具体的に
+・話してほしいストーリーや事例があれば入れる（担当者自身の経験談など）
+・この面談で合わなかったときに、次につなぐ別の事業があれば1つ入れる
+・最後は次の一歩（日程取り・体験の予約など）
+・本人の情報にない事実は作らない。売り込みにならない言い方で
+・箇条書きだけを出力（前置き不要）`;
+}
+function vShare(){
+  const W=S.canWrite;
+  const list = S.handoffs.filter(h=>S.people.has(h.personId)).sort((a,b)=>(b.datetime||b.createdAt||"").localeCompare(a.datetime||a.createdAt||""));
+  const hoList = list.length ? list.map(h=>{ const p=S.people.get(h.personId); const s=hoStatus(h);
+    return `<div class="ho"><div><div class="t">${nameOf(p)}　<span class="muted" style="font-weight:600">${esc(h.kind||"面談")}</span> ${h.biz?bizChip(h.biz):""}</div><div class="muted small">${mdt(h.datetime)||"日時未定"}${h.manager?`・${esc(h.manager)}`:""}</div></div>
+      <div class="row"><span class="st ${s.c}">${s.t}</span><button class="btn sm" data-act="openHo" data-hid="${h.id}">${s.k==="back"&&W?"結果を記入":"開く"}</button></div></div>`; }).join("")
+    : `<p class="muted" style="margin:0">まだありません。「新しくつくる」から、次につなぐ面談の文面を作れます。</p>`;
+  return `${head("リーダー共有","次につなぐ面談の依頼をLINEで送る文面と、月のまとめを作ります", W?`<button class="btn pri" data-act="newHo">${icon("plus")}新しくつくる</button>`:"")}
+  <div class="stack">
+    ${S.ui.hoOpen ? hoEditor() : ""}
+    <section class="card"><div class="sec-title"><h2>つなぎ依頼の一覧</h2><span class="muted">面談日を過ぎたら「話された内容」を記入して戻す</span></div>${hoList}</section>
+    ${monthlySummary()}
+    ${W&&isAdmin()?templatePanel():""}
+  </div>`;
+}
+function hoEditor(){
+  const W=S.canWrite; const people=[...S.people.values()].sort((a,b)=>(a.kana||a.name||"").localeCompare(b.kana||b.name||"","ja"));
+  const pid=draft("ho_person"); const p=S.people.get(pid);
+  const busy=S.ai.points?.busy; const msg=S.ai.points?.msg;
+  const mgrs = uniq([...S.handoffs.map(h=>h.manager), ...[...S.people.values()].flatMap(x=>Object.values(x.biz||{}).map(s=>s.owner))]);
+  const cur = S.handoffs.find(h=>h.id===S.ui.hoId);
+  const txt = hoFill();
+  return `<section class="card stack" style="gap:14px">
+    <div class="between"><h2>${cur?"つなぎ依頼を編集":"新しいつなぎ依頼"}</h2><button class="btn sm ghost" data-act="closeHo">閉じる</button></div>
+    <div class="grid2" style="gap:20px">
+      <div class="stack" style="gap:12px">
+        <div class="fields">
+          <label class="f">つなぐ人<select id="ho_person" data-d="ho_person" data-ho="person"><option value="">選んでください</option>${people.map(x=>`<option value="${x.id}" ${pid===x.id?"selected":""}>${esc(x.name)}${x.sample?"（サンプル）":""}</option>`).join("")}</select></label>
+          <label class="f">面談の種類（研修項目）<input id="ho_kind" type="text" list="kindlist" data-d="ho_kind" data-ho="kind" value="${esc(draft("ho_kind"))}" placeholder="例：転職面談"></label>
+          <label class="f">事業<select id="ho_biz" data-d="ho_biz" data-ho="1"><option value="">指定なし</option>${biz().map(b=>`<option value="${b.key}" ${draft("ho_biz")===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
+          <label class="f">日時<input id="ho_dt" type="datetime-local" data-d="ho_dt" data-ho="1" value="${esc(draft("ho_dt"))}"></label>
+          <label class="f">マネージャー（担当者）<input id="ho_mgr" type="text" list="mgrlist" data-d="ho_mgr" data-ho="1" value="${esc(draft("ho_mgr"))}"></label>
+          <label class="f">年齢<input id="ho_age" type="text" data-d="ho_age" data-ho="1" value="${esc(draft("ho_age"))}" placeholder="例：20代"></label>
+        </div>
+        <datalist id="kindlist">${kinds().map(k=>`<option value="${esc(k[0])}">`).join("")}</datalist>
+        <datalist id="mgrlist">${mgrs.map(m=>`<option value="${esc(m)}">`).join("")}</datalist>
+        <div class="stack" style="gap:6px">
+          <div class="between"><span class="small muted" style="font-weight:600">伝えてほしいポイント</span>${S.sample&&W?`<button class="btn sm" data-act="aiPoints" ${busy||!p?"disabled":""}>${icon("spark")}${busy?"作成中…":"この面談向けにAIで作る"}</button>`:""}</div>
+          <textarea id="ho_points" rows="7" data-d="ho_points" data-ho="1" aria-label="伝えてほしいポイント" placeholder="・〇〇の可能性とわくわく&#10;→補足&#10;・次回の日程取り">${esc(draft("ho_points"))}</textarea>
+          ${msg?`<p class="hint" style="color:var(--bad);margin:0">${esc(msg)}</p>`:""}
+          ${!S.sample&&W&&p?`<p class="hint" style="margin:0">AIに頼むときは <button class="btn sm" data-act="copyPointsPrompt">AI用にコピー</button> して、返ってきた箇条書きを貼ってください。</p>`:""}
+        </div>
+        <div class="fields">
+          <label class="f">関係値<textarea id="ho_rel" rows="2" data-d="ho_rel" data-ho="1" placeholder="例：SNS&#10;https://www.instagram.com/...">${esc(draft("ho_rel"))}</textarea></label>
+          <label class="f">メモ<textarea id="ho_memo" rows="2" data-d="ho_memo" data-ho="1">${esc(draft("ho_memo"))}</textarea></label>
+        </div>
+        <details ${draft("ho_talked")||draft("ho_q")||draft("ho_fb")||(cur&&hoStatus(cur).k==="back")?"open":""}><summary><b>面談のあとに記入（戻す）</b> <span class="muted small">話された内容・質問・フィードバック</span></summary>
+          <div class="stack" style="gap:10px;margin-top:10px">
+            <label class="f">話された内容<textarea id="ho_talked" rows="3" data-d="ho_talked" data-ho="1">${esc(draft("ho_talked"))}</textarea></label>
+            <label class="f">NAからの質問事項<textarea id="ho_q" rows="2" data-d="ho_q" data-ho="1">${esc(draft("ho_q"))}</textarea></label>
+            <label class="f">マネージャーからのフィードバック<textarea id="ho_fb" rows="2" data-d="ho_fb" data-ho="1">${esc(draft("ho_fb"))}</textarea></label>
+          </div></details>
+      </div>
+      <div class="linebox stack" style="gap:10px">
+        <div class="between"><b>LINEで送る文面</b><span class="muted small">左の入力から自動で作成</span></div>
+        <textarea id="ho_text" rows="22" readonly aria-label="LINEで送る文面">${esc(txt)}</textarea>
+        <div class="row">
+          <button class="btn pri" data-act="copyHo">コピー</button>
+          <a class="btn line" id="ho_line" href="https://line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
+          ${W?`<button class="btn" data-act="saveHo" ${p?"":"disabled"}>保存</button><button class="btn" data-act="sentHo" ${p?"":"disabled"}>送った</button>`:""}
+        </div>
+        ${W?`<p class="hint" style="margin:0">「送った」を押すと保存され、行動量の「つなぎ」に1件入り、事業のステータスが「つないだ」段階に進みます。面談後に「話された内容」を記入して保存すると「戻し済み」になります。</p>`:""}
+        ${cur&&W?`<div class="row" style="justify-content:flex-end">${S.ui.confirm==="ho:"+cur.id?`<button class="btn sm warnb" data-act="delHo">本当に削除</button>`:`<button class="btn sm ghost" data-act="askDelHo">この依頼を削除</button>`}</div>`:""}
+      </div>
+    </div>
+  </section>`;
+}
+async function aiPoints(){
+  const p=S.people.get(draft("ho_person")); if(!p) return;
+  S.ai.points={busy:true}; render();
+  try{
+    const {text} = await S.sample(pointsPrompt(p, draft("ho_kind"), draft("ho_biz"), draft("ho_mgr")), {cache:false});
+    S.d.ho_points = text.trim().replace(/^```\w*\n?/,"").replace(/```$/,"").trim();
+    delete S.ai.points;
+  }catch(e){ if(e.code==="not_granted"||e.code==="sampling_disabled") S.sample=null; S.ai.points={msg:aiErr(e)}; }
+  render();
+}
+async function saveHo(markSent){
+  const data=hoData(); if(!data.personId){ toast("つなぐ人を選んでください"); return; }
+  const id=S.ui.hoId || uid(); const prev = S.handoffs.find(h=>h.id===id);
+  const wasSent = prev && prev.status==="sent";
+  if(markSent) data.status="sent";
+  S.ui.hoId=id;
+  await safe(async()=>{
+    await store.saveHandoff(id,data);
+    if(markSent && !wasSent){
+      await store.addLog({personId:data.personId,type:"connect",biz:data.biz||"",text:`${data.kind||"面談"}につなぐ依頼をリーダーに送った${data.datetime?`（${mdt(data.datetime)}）`:""}`});
+      const p=S.people.get(data.personId); const b=bizBy(data.biz);
+      if(p && b){ const curSt=((p.biz||{})[b.key]||{});
+        if(PHASE_RANK[phaseOf(b.key,curSt.status)]<2){ const target=b.statuses.find(s=>s[1]==="connected"); if(target) await store.updatePerson(p.id,{biz:{[b.key]:{status:target[0],updatedAt:new Date().toISOString(),owner:data.manager||curSt.owner||""}}}); } }
+    }
+    if(data.talked.trim() && !(prev && (prev.talked||"").trim())){
+      await store.addLog({personId:data.personId,type:"report",biz:data.biz||"",date:(data.datetime||today()).slice(0,10),text:`【${data.kind||"面談"}の結果】${data.talked}${data.feedback?`\nFB：${data.feedback}`:""}`});
+    }
+  }, markSent?"送信済みにしました":"保存しました");
+  render();
+}
+function monthlySummary(){
+  const cands = shareCandidates();
+  if(S.ui.shareSel===null) S.ui.shareSel = cands.slice(0,5).map(p=>p.id);
+  const all = [...S.people.values()].sort((a,b)=>(cands.indexOf(a)===-1?999:cands.indexOf(a))-(cands.indexOf(b)===-1?999:cands.indexOf(b)));
+  const txt = draft("share_txt", null) ?? shareText(S.ui.shareSel);
+  const busy = S.ai.share?.busy;
+  return `<details class="card" ${S.ui.sumOpen?"open":""} data-sum="1"><summary><b>月のまとめを送る</b> <span class="muted small">今月の数字と動いている人をまとめた短い報告</span></summary>
+  <div class="grid2" style="margin-top:14px">
+    <div class="stack" style="gap:10px">
+      <textarea id="share_txt" rows="14" data-d="share_txt" aria-label="月のまとめ">${esc(txt)}</textarea>
+      <div class="row"><button class="btn pri" data-act="copyShare">コピー</button>
+        <a class="btn line" href="https://line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
+        ${S.sample&&S.canWrite?`<button class="btn" data-act="aiShare" ${busy?"disabled":""}>${icon("spark")}${busy?"作成中…":"AIで要点を3つに絞る"}</button>`:""}
+        ${draft("share_txt",null)!==null?`<button class="btn" data-act="resetShare">記録から作り直す</button>`:""}</div>
+    </div>
+    <div class="stack" style="gap:10px">
+      <b>入れる人</b>
+      <ul class="plain">${all.map(p=>`<li style="padding:3px 0"><label class="row"><input type="checkbox" id="ss_${p.id}" data-act="shareSel" data-pid="${p.id}" ${S.ui.shareSel.includes(p.id)?"checked":""}> ${tempChip(p.temp)} <b>${nameOf(p)}</b></label></li>`).join("") || `<li class="muted">まだ誰も登録されていません</li>`}</ul>
+      <label class="f">相談したいこと<textarea id="share_ask" rows="3" data-d="share_ask" data-rerender="1" placeholder="例：〇〇さんを人材につなぐタイミングを相談したい">${esc(draft("share_ask", S.config.shareAsk||""))}</textarea></label>
+    </div>
+  </div></details>`;
+}
+function templatePanel(){
+  return `<details class="card"><summary><b>LINE文面のフォーマット設定</b> <span class="muted small">項目名や順番を変えたいとき</span></summary>
+    <div class="stack" style="gap:10px;margin-top:12px">
+      <p class="hint" style="margin:0">{ } で囲んだ部分に入力内容が入ります。空のときは「ー」になります。使える項目：${PLACEHOLDERS.map(x=>`<code>{${x}}</code>`).join(" ")}</p>
+      <textarea id="tpl" rows="14" data-d="tpl" aria-label="フォーマット">${esc(draft("tpl", template()))}</textarea>
+      <label class="f">面談の種類の候補（1行に1つ「種類 | 事業key」。事業key：${biz().map(b=>`${b.key}=${esc(b.name)}`).join("、")}）<textarea id="kinds" rows="5" data-d="kinds">${esc(draft("kinds", kinds().map(k=>k[1]?`${k[0]} | ${k[1]}`:k[0]).join("\n")))}</textarea></label>
+      <div class="row"><button class="btn pri" data-act="saveTpl">保存</button><button class="btn" data-act="resetTpl">最初のフォーマットに戻す</button></div>
+    </div></details>`;
+}
+function shareCandidates(){
+  const t=today(); const since=ymd(new Date(Date.now()-14*864e5));
+  return [...S.people.values()].map(p=>{
+    const recent = S.logs.some(l=>l.personId===p.id && l.date>=since);
+    const soon = (p.actions||[]).some(a=>!a.done && a.due && daysBetween(t,a.due)<=7);
+    return {p, score:(recent?2:0)+(soon?1:0)+(p.temp==="A"?1:0)};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.p);
+}
+function shareText(sel){
+  const mk=monthKey(new Date()), c=countMetrics(mk), g=goalsFor(mk); const pi=paceInfo(mk);
+  const nums = METRICS.filter(m=>m.key!=="new").map(m=>`${m.label}${c[m.key]}${g[m.key]?`/${g[m.key]}`:""}`).join("・");
+  const ppl = sel.map(id=>S.people.get(id)).filter(Boolean).map(p=>{
+    const act = biz().map(b=>{const st=(p.biz||{})[b.key]; const ph=st&&phaseOf(b.key,st.status); return ph&&ph!=="none"&&ph!=="lost"?`${b.name}：${st.status}`:""}).filter(Boolean).join("、");
+    const na = (p.actions||[]).filter(a=>!a.done).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"))[0];
+    const out = [`・${p.name}さん［${act||"関係づくり中"}］温度感${p.temp||"—"}`];
+    if((p.needs||[]).length||(p.frustrations||[]).length) out.push(`　ニーズ：${[...(p.needs||[]).slice(0,1),...(p.frustrations||[]).slice(0,1)].join("／")}`);
+    if((p.talkPoints||[]).length) out.push(`　伝えること：${p.talkPoints[0]}`);
+    if(na) out.push(`　次：${na.due?md(na.due)+" ":""}${na.text}`);
+    return out.join("\n");
+  });
+  const fu = followUps().length + hoBacklog().length; const lateN = openActions().filter(x=>x.a.due&&x.a.due<today()).length;
+  const ask = draft("share_ask", S.config.shareAsk||"").trim();
+  return [
+    `【${meName()||"私"}の人脈リスト｜${md(today())}時点】`,
+    `■ 今月（${pi.elapsed}/${pi.dim}日）${nums}`,
+    `■ リスト${S.people.size}人${lateN?`・期限切れ${lateN}件`:""}${fu?`・戻す待ち${fu}件`:""}`,
+    ppl.length?`■ 動いている人（${ppl.length}人）\n${ppl.join("\n")}`:"",
+    ask?`■ 相談したいこと\n${ask}`:"",
+  ].filter(Boolean).join("\n");
+}
+async function aiShare(){
+  const base = draft("share_txt",null) ?? shareText(S.ui.shareSel);
+  S.ai.share={busy:true}; render();
+  try{
+    const {text} = await S.sample(`次はメンバーがリーダーに送る人脈リストの進捗メモです。リーダーが30秒で状況をつかみ、何を判断・支援すればいいか分かるように書き直してください。
+・最初に「リーダーに伝えたいこと」を最大3つ（誰の・何を・どうしてほしいか）
+・続けて今月の数字を1行
+・人ごとの詳細は1人1行まで
+・全体で350字以内。事実にないことは足さない。LINEで送るので見出しは【】で。
+
+${base}`,{cache:false});
+    S.d.share_txt = text.trim();
+  }catch(e){ if(e.code!=="cancelled") toast("AIでまとめられませんでした"); }
+  delete S.ai.share; render();
+}
+
+/* ============ チーム（リーダー） ============ */
+const ROLE_LABEL = {member:"メンバー", leader:"リーダー", admin:"管理者"};
+function vTeam(){
+  const mk = monthKey(new Date()), pi = paceInfo(mk);
+  if(S.team===null){ setTimeout(loadTeam,0); return `<div class="empty">読み込み中…</div>`; }
+  if(S.team==="loading") return `<div class="empty">チームの数字を集計しています…</div>`;
+  if(S.team==="error") return `<div class="empty">集計できませんでした。<br><button class="btn" data-act="teamReload" style="margin-top:10px">もう一度</button></div>`;
+  const ms = [...S.team].sort((a,b)=>(b.counts.connect+b.counts.won)-(a.counts.connect+a.counts.won) || b.counts.contact-a.counts.contact);
+  const keys = ["contact","meeting","propose","connect","won"];
+  const total = Object.fromEntries(keys.map(k=>[k, ms.reduce((s,m)=>s+(m.counts[k]||0),0)]));
+  const cell = (m,k) => { const v=m.counts[k]||0, g=+m.goals[k]||0; const behind = g && v < Math.round(g*pi.ratio);
+    return `<td class="num"><b style="color:${g&&v>=g?"var(--ok)":behind?"var(--bad)":"inherit"}">${v}</b>${g?`<span class="muted small"> / ${g}</span>`:""}</td>`; };
+  const rows = ms.map(m=>`<tr>
+      <td><button class="btn ghost sm" style="padding:0;font-weight:700;font-size:13.5px" data-act="viewMember" data-mid="${m.id}">${esc(m.name)}</button>${m.role!=="member"?` <span class="chip">${ROLE_LABEL[m.role]}</span>`:""}${m.theme?`<div class="muted small">${esc(m.theme)}</div>`:""}</td>
+      ${keys.map(k=>cell(m,k)).join("")}
+      <td class="num">${m.list}</td>
+      <td>${m.late?`<span class="st bad">${m.late}</span>`:`<span class="muted">0</span>`}</td>
+      <td>${m.back?`<span class="st warn">${m.back}</span>`:`<span class="muted">0</span>`}</td>
+      <td class="small muted">${m.last?md(m.last):"—"}</td>
+    </tr>`).join("");
+  return `${head("チーム", `${+mk.slice(5)}月・${pi.elapsed}/${pi.dim}日経過。赤字は目標ペースより遅れている数字。名前を押すとその人のノートを閲覧できます`, `<button class="btn" data-act="teamReload">集計し直す</button>`)}
+  <div class="stack">
+    <div class="kpis">${keys.map(k=>`<div class="kpi"><span class="lab">チームの${METRICS.find(m=>m.key===k).label}</span><div class="val">${total[k]}</div></div>`).join("")}<div class="kpi"><span class="lab">メンバー</span><div class="val">${ms.length}</div></div></div>
+    <section class="card"><div class="scroll-x"><table class="tbl"><thead><tr><th>メンバー</th>${keys.map(k=>`<th>${METRICS.find(m=>m.key===k).label}</th>`).join("")}<th>リスト</th><th>期限切れ</th><th>戻す待ち</th><th>最終記録</th></tr></thead><tbody>${rows||`<tr><td colspan="10" class="muted">メンバーがいません</td></tr>`}</tbody></table></div></section>
+  </div>`;
+}
+
+/* ============ メンバー管理（管理者） ============ */
+const memberUrl = m => m ? `${BOOT.url||""}?k=${m.key}` : "";
+function vMembers(){
+  const ms = [...S.members].sort((a,b)=>(a.active===b.active?0:a.active?-1:1) || (a.name||"").localeCompare(b.name||"","ja"));
+  const rows = ms.map(m=>{
+    const c = S.ui.confirm||""; const self = m.id===S.me.id;
+    return `<div class="ho" style="grid-template-columns:minmax(0,1fr)">
+      <div class="between"><div class="row"><b>${esc(m.name)}</b>${self?`<span class="chip">あなた</span>`:""}${m.active?"":`<span class="st bad">停止中</span>`}${S.ui.newMember===m.id?`<span class="st ok">追加しました</span>`:""}</div>
+        <div class="row">
+          <select id="mr_${m.id}" data-act="memberRole" data-mid="${m.id}" style="width:auto" ${self?"disabled":""} aria-label="${esc(m.name)}の権限">${Object.entries(ROLE_LABEL).map(([k,v])=>`<option value="${k}" ${m.role===k?"selected":""}>${v}</option>`).join("")}</select>
+          ${self?"":c==="stop:"+m.id?`<button class="btn sm warnb" data-act="memberOp" data-op="stop" data-mid="${m.id}">停止する</button>`:m.active?`<button class="btn sm" data-act="askMember" data-op="stop" data-mid="${m.id}">停止</button>`:`<button class="btn sm" data-act="memberOp" data-op="start" data-mid="${m.id}">再開</button>`}
+          ${c==="rekey:"+m.id?`<button class="btn sm warnb" data-act="memberOp" data-op="rekey" data-mid="${m.id}">URLを作り直す（古いURLは無効）</button>`:`<button class="btn sm ghost" data-act="askMember" data-op="rekey" data-mid="${m.id}">URLを作り直す</button>`}
+        </div></div>
+      <div class="row" style="margin-top:6px"><input id="mu_${m.id}" type="text" readonly value="${esc(memberUrl(m))}" style="flex:1;min-width:0;font-size:12px" aria-label="${esc(m.name)}の個人用URL"><button class="btn sm" data-act="copyUrl" data-mid="${m.id}">コピー</button></div>
+    </div>`;
+  }).join("");
+  return `${head("メンバー管理", "メンバーを追加すると個人用URLができます。URLを本人にだけ送ってください（URLを知っている人はそのノートを開けます）")}
+  <div class="stack">
+    <section class="card stack" style="gap:12px;max-width:760px">
+      <h2>メンバーを追加</h2>
+      <div class="row" style="align-items:flex-end">
+        <label class="f" style="flex:2;min-width:160px">名前<input id="m_name" type="text" data-d="m_name" value="${esc(draft("m_name"))}"></label>
+        <label class="f" style="flex:1;min-width:120px">権限<select id="m_role" data-d="m_role">${Object.entries(ROLE_LABEL).map(([k,v])=>`<option value="${k}" ${draft("m_role","member")===k?"selected":""}>${v}</option>`).join("")}</select></label>
+        <button class="btn pri" data-act="addMember">追加</button>
+      </div>
+      <p class="hint" style="margin:0">メンバー＝自分のノートだけ／リーダー＝チーム全員のノートを閲覧／管理者＝リーダーの権限＋メンバー管理・事業とフォーマットの設定</p>
+    </section>
+    <section class="card"><div class="sec-title"><h2>メンバー一覧</h2><span class="muted">${S.members.filter(m=>m.active).length}人が利用中</span></div>${rows}</section>
+  </div>`;
+}
+
+/* ============ 目標・行動量 ============ */
+function vGoals(){
+  const now=new Date(); const mk = S.ui.goalMonth || monthKey(now);
+  const [y,m]=mk.split("-").map(Number);
+  const prev = monthKey(new Date(y,m-2,1)), next = monthKey(new Date(y,m,1));
+  const c=countMetrics(mk), g=goalsFor(mk), pi=paceInfo(mk), pc=countMetrics(prev);
+  const W=S.canWrite;
+  const rows = METRICS.map(mt=>{
+    const v=c[mt.key], goal=+g[mt.key]||0; const rest=Math.max(0,goal-v);
+    const perWeek = pi.left>0 && rest ? rest/pi.left*7 : 0; const d = v - pc[mt.key];
+    return `<tr>
+      <td><b>${mt.label}</b><div class="muted small">${mt.desc}</div></td>
+      <td class="num" style="font-size:18px;font-weight:700">${v}</td>
+      <td>${W?`<input id="g_${mt.key}" type="number" min="0" style="width:80px" data-d="g_${mk}_${mt.key}" value="${esc(draft("g_"+mk+"_"+mt.key, g[mt.key]??""))}" aria-label="${mt.label}の目標">`:`<span class="num">${goal||"—"}</span>`}</td>
+      <td style="min-width:140px">${goal?`<div class="bar"><i style="width:${Math.min(100,v/goal*100)}%"></i><b style="left:${(pi.ratio*100).toFixed(1)}%"></b></div><div class="small muted num">${Math.round(v/goal*100)}%</div>`:"—"}</td>
+      <td class="small">${!goal?"—":rest===0?`<span class="pace ahead">達成</span>`:pi.left>0?`あと${rest}・<b>週${perWeek<1?perWeek.toFixed(1):Math.ceil(perWeek)}</b>ペース`:`<span class="pace behind">あと${rest}で終了</span>`}</td>
+      <td class="small num" style="color:${d>0?"var(--ok)":d<0?"var(--bad)":"var(--sub)"}">${d>0?"+":""}${d}</td>
+    </tr>`;
+  }).join("");
+  const days=[]; for(let i=29;i>=0;i--) days.push(ymd(new Date(Date.now()-i*864e5)));
+  const per = days.map(d=>S.logs.filter(l=>l.date===d && l.type!=="note").length);
+  const mx = Math.max(4,...per); const W2=600,H=120,bw=W2/30;
+  const svg = `<svg viewBox="0 0 ${W2} ${H+22}" style="width:100%;height:auto;display:block" role="img" aria-label="直近30日の行動件数">
+    ${[0.5,1].map(f=>`<line x1="0" x2="${W2}" y1="${(H-H*f).toFixed(1)}" y2="${(H-H*f).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="2" y="${(H-H*f+11).toFixed(1)}" font-size="10" fill="var(--sub)">${Math.round(mx*f)}</text>`).join("")}
+    ${per.map((n,i)=>`<rect x="${(i*bw+2).toFixed(1)}" y="${(H-n/mx*H).toFixed(1)}" width="${(bw-4).toFixed(1)}" height="${(n/mx*H).toFixed(1)}" rx="3" fill="var(--accent)" fill-opacity="${days[i]===today()?1:.55}"><title>${md(days[i])}：${n}件</title></rect>`).join("")}
+    <line x1="0" x2="${W2}" y1="${H}" y2="${H}" stroke="var(--line)"/>
+    ${[0,7,14,21,29].map(i=>`<text x="${(i*bw+bw/2).toFixed(1)}" y="${H+15}" font-size="10" text-anchor="middle" fill="var(--sub)">${md(days[i])}</text>`).join("")}
+  </svg>`;
+  const theme = draft("theme_"+mk, (S.config.themes||{})[mk]||"");
+  return `${head(`${y}年${m}月の目標`, `${pi.elapsed}/${pi.dim}日経過（${Math.round(pi.ratio*100)}%）・縦線＝今日時点の目標ペース`, `<button class="btn sm" data-act="goalMonth" data-mk="${prev}">← 前の月</button><button class="btn sm" data-act="goalMonth" data-mk="${next}">次の月 →</button>`)}
+  <div class="stack">
+    <section class="card">
+      <label class="f" style="margin-bottom:14px">今月のテーマ（自分で決めたこと）${W?`<input id="theme_in" type="text" data-d="theme_${mk}" value="${esc(theme)}" placeholder="例：サークル経由で人材に3人つなぐ">`:`<span>${esc(theme)||"—"}</span>`}</label>
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>指標</th><th>実績</th><th>目標</th><th>進み具合</th><th>この先</th><th>先月比</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${W?`<div class="row" style="margin-top:14px"><button class="btn pri" data-act="saveGoals" data-mk="${mk}">目標を保存</button><button class="btn" data-act="copyGoals" data-mk="${mk}" data-from="${prev}">先月の目標を写す</button></div>`:""}
+      <p class="hint">数字は記録から自動で数えます。事業のステータスを変える・面談を解析する・LINE共有で「送った」を押す・連絡を記録する、で増えます。</p>
+    </section>
+    <section class="card"><div class="sec-title"><h2>直近30日の行動量</h2><span class="muted">1日あたりの記録件数</span></div>${svg}</section>
+    ${W&&isAdmin()?settingsPanel():""}
+  </div>`;
+}
+function settingsPanel(){
+  const bs = biz();
+  return `<details class="card"><summary><b>事業とステータスの設定</b> <span class="muted small">事業が増えたとき・ステータスや報酬が変わったときに</span></summary>
+    <div class="stack" style="margin-top:12px">
+    <p class="hint" style="margin:0">ステータスは1行に1つ「名前 | 段階」。段階は none（未提案）/ proposed（提案）/ connected（つないだ）/ won（成立）/ ended（終了）/ lost（見送り）。</p>
+    ${bs.map((b,i)=>`<div class="fields" style="border-top:1px solid var(--line);padding-top:12px">
+      <label class="f">事業名<input id="bz_n${i}" type="text" data-d="bz_n${i}" value="${esc(draft("bz_n"+i,b.name))}"></label>
+      <label class="f">入口の困りごと<input id="bz_e${i}" type="text" data-d="bz_e${i}" value="${esc(draft("bz_e"+i,b.entry))}"></label>
+      <label class="f">報酬メモ<input id="bz_r${i}" type="text" data-d="bz_r${i}" value="${esc(draft("bz_r"+i,b.reward))}"></label>
+      <label class="f">ステータス<textarea id="bz_s${i}" rows="4" data-d="bz_s${i}">${esc(draft("bz_s"+i,b.statuses.map(s=>s.join(" | ")).join("\n")))}</textarea></label>
+    </div>`).join("")}
+    <div class="row"><button class="btn pri" data-act="saveBiz">設定を保存</button><button class="btn" data-act="addBiz">事業を追加</button></div>
+    </div></details>`;
+}
+
+/* ============ イベント ============ */
+document.addEventListener("toggle", e=>{ if(e.target.dataset && e.target.dataset.sum) S.ui.sumOpen=e.target.open; }, true);
+document.addEventListener("input", e=>{
+  const el=e.target;
+  if(el.dataset.d!==undefined){ S.d[el.dataset.d] = el.type==="checkbox" ? el.checked : el.value; }
+  if(el.dataset.ho){ const t=$("#ho_text"); if(t){ const txt=hoFill(); t.value=txt; const l=$("#ho_line"); if(l) l.href="https://line.me/R/share?text="+encodeURIComponent(txt); } }
+  if(el.dataset.filter){ S.ui.filters[el.dataset.filter]=el.value; if(el.tagName==="INPUT"){ clearTimeout(window._ft); window._ft=setTimeout(()=>{ const pos=el.selectionStart; render(); const n=$("#fq"); if(n){ n.focus(); n.setSelectionRange(pos,pos);} },250);} }
+  if(el.id==="meName"){ S.d.me=el.value; clearTimeout(window._mt); window._mt=setTimeout(()=>safe(()=>store.saveConfig({me:el.value.trim()})),800); }
+});
+document.addEventListener("change", e=>{
+  const el=e.target;
+  if(el.dataset.d!==undefined) S.d[el.dataset.d] = el.type==="checkbox" ? el.checked : el.value;
+  if(el.dataset.filter){ S.ui.filters[el.dataset.filter]=el.value; render(); return; }
+  if(el.dataset.apply){ const id=route().id; S.ai[id].off=S.ai[id].off||{}; S.ai[id].off[el.dataset.apply]=!el.checked; return; }
+  if(el.dataset.ho==="person"){ const keep={ho_kind:draft("ho_kind"),ho_dt:draft("ho_dt"),ho_mgr:draft("ho_mgr")}; const hid=S.ui.hoId; hoLoad(null,el.value); S.ui.hoId=hid; for(const [k,v] of Object.entries(keep)) if(v) S.d[k]=v; render(); return; }
+  if(el.dataset.ho==="kind"){ const k=kinds().find(k=>k[0]===el.value.trim()); if(k&&k[1]&&!draft("ho_biz")) S.d.ho_biz=k[1]; else if(k&&k[1]) S.d.ho_biz=k[1]; render(); return; }
+  if(el.dataset.ho && el.tagName==="SELECT"){ render(); return; }
+  if(el.dataset.rerender){ delete S.d.share_txt; safe(()=>store.saveConfig({shareAsk:el.value})); render(); return; }
+  const a=el.dataset.act;
+  if(a==="memberRole"){
+    const id=el.dataset.mid;
+    call("updateMember",{id, role:el.value}).then(m=>{ S.members=S.members.map(x=>x.id===id?m:x); toast("権限を変更しました"); render(); })
+      .catch(()=>{ toast("変更できませんでした"); render(); });
+    return;
+  }
+  if(a==="setStatus"){ const {pid,biz:bk}=el.dataset; safe(()=>changeStatus(pid,bk,el.value), "更新しました"); }
+  if(a==="shareSel"){ const id=el.dataset.pid; S.ui.shareSel = el.checked ? [...S.ui.shareSel,id] : S.ui.shareSel.filter(x=>x!==id); delete S.d.share_txt; render(); }
+});
+document.addEventListener("focusout", e=>{
+  const el=e.target;
+  if(el.dataset && el.dataset.actBlur==="setOwner"){
+    const {pid,biz:bk}=el.dataset; const p=S.people.get(pid); const cur=((p&&p.biz||{})[bk]||{}).owner||"";
+    if(el.value.trim()!==cur) safe(()=>store.updatePerson(pid,{biz:{[bk]:{owner:el.value.trim()}}}),"担当を保存しました");
+  }
+});
+function goShare(){ if(location.hash!=="#share") location.hash="#share"; else { render(); } window.scrollTo(0,0); }
+document.addEventListener("click", e=>{
+  const a=e.target.closest('a[href^="#"]'); if(!a) return;
+  e.preventDefault(); const h=a.getAttribute("href");
+  setTimeout(()=>{ if(location.hash!==h) location.hash=h; else render(); },0);
+});
+document.addEventListener("click", async e=>{
+  const el=e.target.closest("[data-act]"); if(!el || el.tagName==="SELECT" || (el.tagName==="INPUT"&&el.type==="checkbox")) return;
+  const a=el.dataset.act, pid=el.dataset.pid;
+  const p = pid && S.people.get(pid);
+  switch(a){
+    case "filterTo": S.ui.filters={q:"",temp:"",biz:el.dataset.biz,phase:el.dataset.phase}; break;
+    case "createPerson": {
+      const name=draft("n_name").trim(); if(!name){ toast("名前を入れてください"); return; }
+      const id=uid(); const now=new Date().toISOString();
+      const data={name,kana:draft("n_kana").trim(),entry:draft("n_entry"),temp:draft("n_temp"),consent:!!draft("n_consent",false),memo:draft("n_memo").trim(),
+        profile:{age:draft("n_age").trim(),relation:draft("n_relation").trim(),sns:draft("n_sns").trim(),referrer:draft("n_referrer").trim()},biz:{},needs:[],frustrations:[],talkPoints:[],avoid:[],actions:[],createdAt:now,updatedAt:now};
+      await safe(async()=>{ await store.setPerson(id,data); await store.addLog({personId:id,type:"new",text:"リストに追加"}); },"追加しました");
+      for(const k of Object.keys(S.d)) if(k.startsWith("n_")) delete S.d[k];
+      location.hash="#person-"+id; return;
+    }
+    case "editProfile": S.ui.editProfile=pid; for(const k of Object.keys(S.d)) if(k.startsWith("e_")) delete S.d[k]; render(); return;
+    case "cancelProfile": S.ui.editProfile=null; render(); return;
+    case "saveProfile": {
+      const pr={}; for(const [k] of PROFILE_FIELDS) pr[k]=draft("e_"+k,(p.profile||{})[k]||"").trim();
+      const patch={name:draft("e_name",p.name).trim()||p.name,kana:draft("e_kana",p.kana||"").trim(),profile:pr,entry:draft("e_entry",p.entry||""),temp:draft("e_temp",p.temp||""),consent:!!draft("e_consent",!!p.consent),memo:draft("e_memo",p.memo||"").trim(),
+        needs:lines(draft("e_needs",(p.needs||[]).join("\n"))),frustrations:lines(draft("e_frus",(p.frustrations||[]).join("\n"))),talkPoints:lines(draft("e_talk",(p.talkPoints||[]).join("\n"))),avoid:lines(draft("e_avoid",(p.avoid||[]).join("\n")))};
+      S.ui.editProfile=null; await safe(()=>store.updatePerson(pid,patch),"保存しました"); render(); return;
+    }
+    case "addAction": {
+      const text=draft("na_"+pid).trim(); if(!text){ toast("アクションを書いてください"); return; }
+      const acts=[...(p.actions||[]),{id:uid(),text,due:draft("nd_"+pid),done:false}];
+      delete S.d["na_"+pid]; delete S.d["nd_"+pid];
+      await safe(()=>store.updatePerson(pid,{actions:acts}),"追加しました"); render(); return;
+    }
+    case "doneAction": {
+      const act=(p.actions||[]).find(x=>x.id===el.dataset.aid); if(!act) return;
+      const acts=(p.actions||[]).map(x=>x.id===act.id?{...x,done:true,doneAt:today()}:x);
+      await safe(async()=>{ await store.updatePerson(pid,{actions:acts}); await store.addLog({personId:pid,type:"contact",text:"✓ "+act.text}); },"完了しました（接触として記録）"); return;
+    }
+    case "dropAction": await safe(()=>store.updatePerson(pid,{actions:(p.actions||[]).filter(x=>x.id!==el.dataset.aid)})); return;
+    case "addLog": {
+      const text=draft("lx_"+pid).trim(); const type=draft("lt_"+pid,"contact");
+      if(!text && type==="note"){ toast("メモを書いてください"); return; }
+      await safe(()=>store.addLog({personId:pid,type,biz:draft("lb_"+pid)||"",date:draft("ld_"+pid,today()),text}),"記録しました");
+      delete S.d["lx_"+pid]; render(); return;
+    }
+    case "askDelLog": S.ui.confirm="log:"+el.dataset.lid; render(); return;
+    case "delLog": S.ui.confirm=null; await safe(()=>store.deleteLog(el.dataset.lid),"削除しました"); render(); return;
+    case "askDelPerson": S.ui.confirm="person:"+pid; render(); return;
+    case "cancelConfirm": S.ui.confirm=null; render(); return;
+    case "delPerson": S.ui.confirm=null; await safe(()=>store.deletePerson(pid),"削除しました"); location.hash="#list"; return;
+    case "analyze": runAnalyze(pid); return;
+    case "reload": loadData(S.viewingOther ? S.target.id : ""); return;
+    case "viewSelf": loadData(""); location.hash="#home"; return;
+    case "viewMember": await loadData(el.dataset.mid); location.hash="#home"; return;
+    case "addMember": {
+      const name=draft("m_name").trim(); if(!name){ toast("名前を入れてください"); return; }
+      try{ const m=await call("addMember",{name, role:draft("m_role","member")}); S.members.push(m); delete S.d.m_name; S.ui.newMember=m.id; render(); toast("追加しました。URLを本人に送ってください"); }
+      catch(e){ toast("追加できませんでした"); }
+      return;
+    }
+    case "copyUrl": copyText(memberUrl(S.members.find(m=>m.id===el.dataset.mid))); return;
+    case "askMember": S.ui.confirm=el.dataset.op+":"+el.dataset.mid; render(); return;
+    case "memberOp": {
+      const id=el.dataset.mid, op=el.dataset.op; S.ui.confirm=null;
+      const patch = op==="stop"?{active:false} : op==="start"?{active:true} : op==="rekey"?{newKey:true} : {};
+      try{ const m=await call("updateMember",{id,...patch}); S.members=S.members.map(x=>x.id===id?m:x); render(); toast(op==="rekey"?"新しいURLにしました。古いURLは使えません":"更新しました"); }
+      catch(e){ toast(e.code==="self_admin"?"自分自身は停止・権限変更できません":"更新できませんでした"); render(); }
+      return;
+    }
+    case "teamReload": loadTeam(); return;
+    case "copyPrompt": { const tr=draft("tr_"+pid).trim(); if(!tr){ toast("先に文字起こしを貼り付けてください"); return; } copyText(analysisPrompt(p,tr)); return; }
+    case "loadJson": {
+      const raw=draft("js_"+pid).trim(); let r=null;
+      try{ const m=raw.match(/\{[\s\S]*\}/); r=JSON.parse(m?m[0]:raw); }catch(_){}
+      S.ai[pid] = r ? {result:r} : {msg:"JSONとして読み取れませんでした。AIの返答の { から } までを貼ってください。"}; render(); return;
+    }
+    case "applyAI": applyAI(pid); return;
+    case "discardAI": delete S.ai[pid]; render(); return;
+    /* LINE共有 */
+    case "newHo": hoLoad(null, pid||""); delete S.ai.points; goShare(); return;
+    case "openHo": { const h=S.handoffs.find(x=>x.id===el.dataset.hid); if(!h) return; hoLoad(h); delete S.ai.points; goShare(); return; }
+    case "closeHo": S.ui.hoOpen=false; S.ui.hoId=null; render(); return;
+    case "aiPoints": aiPoints(); return;
+    case "copyPointsPrompt": { const pp=S.people.get(draft("ho_person")); if(pp) copyText(pointsPrompt(pp,draft("ho_kind"),draft("ho_biz"),draft("ho_mgr"))); return; }
+    case "copyHo": copyText(hoFill()); return;
+    case "saveHo": saveHo(false); return;
+    case "sentHo": saveHo(true); return;
+    case "askDelHo": S.ui.confirm="ho:"+S.ui.hoId; render(); return;
+    case "delHo": { const id=S.ui.hoId; S.ui.confirm=null; S.ui.hoOpen=false; S.ui.hoId=null; await safe(()=>store.deleteHandoff(id),"削除しました"); render(); return; }
+    case "saveTpl": {
+      const ks = lines(draft("kinds", kinds().map(k=>k[1]?`${k[0]} | ${k[1]}`:k[0]).join("\n"))).map(l=>{ const [n,b]=l.split("|").map(s=>s.trim()); return [n, bizBy(b)?b:""]; }).filter(k=>k[0]);
+      await safe(()=>store.saveConfig({lineTemplate:draft("tpl",template()), kinds:ks}),"フォーマットを保存しました");
+      delete S.d.tpl; delete S.d.kinds; render(); return;
+    }
+    case "resetTpl": delete S.d.tpl; await safe(()=>store.saveConfig({lineTemplate:DEFAULT_TEMPLATE}),"最初のフォーマットに戻しました"); render(); return;
+    case "copyShare": copyText($("#share_txt").value); return;
+    case "resetShare": delete S.d.share_txt; render(); return;
+    case "aiShare": aiShare(); return;
+    /* 目標・設定 */
+    case "goalMonth": S.ui.goalMonth=el.dataset.mk; render(); return;
+    case "saveGoals": {
+      const mk=el.dataset.mk; const g={}; for(const m of METRICS){ const v=draft("g_"+mk+"_"+m.key, goalsFor(mk)[m.key]??""); if(v!==""&&v!==null) g[m.key]=Math.max(0,+v||0); }
+      await safe(()=>store.saveConfig({goals:{[mk]:g},themes:{[mk]:draft("theme_"+mk,(S.config.themes||{})[mk]||"")}}),"目標を保存しました");
+      for(const k of Object.keys(S.d)) if(k.startsWith("g_"+mk)) delete S.d[k]; render(); return;
+    }
+    case "copyGoals": { const g=goalsFor(el.dataset.from); if(!Object.keys(g).length){ toast("先月の目標がありません"); return; } for(const m of METRICS) if(g[m.key]!=null) S.d["g_"+el.dataset.mk+"_"+m.key]=String(g[m.key]); render(); return; }
+    case "saveBiz": {
+      const bs = biz().map((b,i)=>{
+        const st = lines(draft("bz_s"+i,b.statuses.map(s=>s.join(" | ")).join("\n"))).map(l=>{ const [n,ph]=l.split("|").map(s=>s.trim()); return [n, PHASES[ph]?ph:"proposed"]; }).filter(s=>s[0]);
+        if(!st.length || st[0][1]!=="none") st.unshift(["未提案","none"]);
+        return {...b,name:draft("bz_n"+i,b.name).trim()||b.name,entry:draft("bz_e"+i,b.entry||""),reward:draft("bz_r"+i,b.reward||""),statuses:st};
+      });
+      for(const k of Object.keys(S.d)) if(k.startsWith("bz_")) delete S.d[k];
+      await safe(()=>store.saveConfig({businesses:bs}),"設定を保存しました"); render(); return;
+    }
+    case "addBiz": {
+      const palette=["--b-jinzai","--b-event","--b-estate","--b-school","--b-beauty","--b-circle"];
+      const bs=[...biz(),{key:"biz"+Date.now().toString(36),name:"新しい事業",color:palette[biz().length%6],entry:"",reward:"",statuses:[["未提案","none"],["提案済","proposed"],["つないだ","connected"],["成立","won"],["見送り","lost"]]}];
+      await safe(()=>store.saveConfig({businesses:bs}),"事業を追加しました（名前を変えて保存してください）"); render(); return;
+    }
+  }
+});
+
+/* ============ 起動 ============ */
+function makeAI(){
+  const f = async (prompt) => ({text: await call("ai",{prompt})});
+  f.json = async (prompt) => {
+    const t = await call("ai",{prompt});
+    const m = String(t).match(/\{[\s\S]*\}/);
+    try{ return JSON.parse(m?m[0]:t); }catch(_){ throw {code:"invalid_json"}; }
+  };
+  return f;
+}
+async function loadData(view){
+  S.mode = "loading"; render();
+  try{
+    const d = await call("bootstrap",{view:view||""});
+    S.me = d.me; S.target = d.target; S.members = d.members||[];
+    S.viewingOther = d.target.id !== d.me.id;
+    S.canWrite = !S.viewingOther;
+    S.sample = d.ai ? makeAI() : null;
+    S.config = deepMerge(JSON.parse(JSON.stringify(d.global||{})), d.mine||{});
+    S.people = new Map((d.people||[]).map(p=>[p.id,p]));
+    S.logs = (d.logs||[]).sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||"").localeCompare(a.createdAt||""));
+    S.handoffs = d.handoffs||[];
+    S.d = {}; S.ai = {}; S.ui.shareSel = null; S.ui.hoOpen = false; S.ui.hoId = null; S.team = null;
+    S.mode = "ready";
+  }catch(e){
+    console.error(e);
+    S.mode = e && (e.code==="invalid_key") ? "nokey" : e && e.code==="offline" ? "offline" : "error";
+  }
+  render();
+}
+async function loadTeam(){
+  S.team = "loading"; render();
+  try{ S.team = await call("teamSummary",{}); }catch(e){ S.team = "error"; }
+  render();
+}
+loadData();
+</script>
