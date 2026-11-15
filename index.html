@@ -328,7 +328,8 @@ function ageBand(a){ const n=parseInt(String(a||"").replace(/[^\d]/g,""),10); if
 /* ============ ストア ============ */
 /* サーバー（Google Apps Script）呼び出し */
 // Apps Script のURL（外部ページから開いたときはここにAPIを送る）
-const API_URL = "https://script.google.com/macros/s/AKfycbxDasyRK0oZbiRBVTc6iGwHykV8mcPqG17GNoHm38xXuvk7muhj9cHxdZS6cvSr6uDv/exec";
+const SL2 = "/" + "/"; // Apps Script が「2つ続くスラッシュ」以降を消すため、実行時に組み立てる
+const API_URL = "https:" + SL2 + "script.google.com/macros/s/AKfycbxDasyRK0oZbiRBVTc6iGwHykV8mcPqG17GNoHm38xXuvk7muhj9cHxdZS6cvSr6uDv/exec";
 const BOOT = (()=>{
   try{ return JSON.parse(document.getElementById("boot").textContent); }
   catch(_){ const q=new URLSearchParams(location.search); return {key:q.get("k")||"", url:location.origin+location.pathname, external:true}; }
@@ -927,7 +928,7 @@ function hoEditor(){
           ${!S.sample&&W&&p?`<p class="hint" style="margin:0">AIに頼むときは <button class="btn sm" data-act="copyPointsPrompt">AI用にコピー</button> して、返ってきた箇条書きを貼ってください。</p>`:""}
         </div>
         <div class="fields">
-          <label class="f">関係値<textarea id="ho_rel" rows="2" data-d="ho_rel" data-ho="1" placeholder="例：SNS&#10;https://www.instagram.com/...">${esc(draft("ho_rel"))}</textarea></label>
+          <label class="f">関係値<textarea id="ho_rel" rows="2" data-d="ho_rel" data-ho="1" placeholder="例：SNS&#10;https:${SL2}www.instagram.com/...">${esc(draft("ho_rel"))}</textarea></label>
           <label class="f">メモ<textarea id="ho_memo" rows="2" data-d="ho_memo" data-ho="1">${esc(draft("ho_memo"))}</textarea></label>
         </div>
         <details ${draft("ho_talked")||draft("ho_q")||draft("ho_fb")||(cur&&hoStatus(cur).k==="back")?"open":""}><summary><b>面談のあとに記入（戻す）</b> <span class="muted small">話された内容・質問・フィードバック</span></summary>
@@ -942,7 +943,7 @@ function hoEditor(){
         <textarea id="ho_text" rows="22" readonly aria-label="LINEで送る文面">${esc(txt)}</textarea>
         <div class="row">
           <button class="btn pri" data-act="copyHo">コピー</button>
-          <a class="btn line" id="ho_line" href="https://line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
+          <a class="btn line" id="ho_line" href="https:${SL2}line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
           ${W?`<button class="btn" data-act="saveHo" ${p?"":"disabled"}>保存</button><button class="btn" data-act="sentHo" ${p?"":"disabled"}>送った</button>`:""}
         </div>
         ${W?`<p class="hint" style="margin:0">「送った」を押すと保存され、行動量の「つなぎ」に1件入り、事業のステータスが「つないだ」段階に進みます。面談後に「話された内容」を記入して保存すると「戻し済み」になります。</p>`:""}
@@ -992,7 +993,7 @@ function monthlySummary(){
     <div class="stack" style="gap:10px">
       <textarea id="share_txt" rows="14" data-d="share_txt" aria-label="月のまとめ">${esc(txt)}</textarea>
       <div class="row"><button class="btn pri" data-act="copyShare">コピー</button>
-        <a class="btn line" href="https://line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
+        <a class="btn line" href="https:${SL2}line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
         ${S.sample&&S.canWrite?`<button class="btn" data-act="aiShare" ${busy?"disabled":""}>${icon("spark")}${busy?"作成中…":"AIで要点を3つに絞る"}</button>`:""}
         ${draft("share_txt",null)!==null?`<button class="btn" data-act="resetShare">記録から作り直す</button>`:""}</div>
     </div>
@@ -1177,7 +1178,7 @@ document.addEventListener("toggle", e=>{ if(e.target.dataset && e.target.dataset
 document.addEventListener("input", e=>{
   const el=e.target;
   if(el.dataset.d!==undefined){ S.d[el.dataset.d] = el.type==="checkbox" ? el.checked : el.value; }
-  if(el.dataset.ho){ const t=$("#ho_text"); if(t){ const txt=hoFill(); t.value=txt; const l=$("#ho_line"); if(l) l.href="https://line.me/R/share?text="+encodeURIComponent(txt); } }
+  if(el.dataset.ho){ const t=$("#ho_text"); if(t){ const txt=hoFill(); t.value=txt; const l=$("#ho_line"); if(l) l.href="https:"+SL2+"line.me/R/share?text="+encodeURIComponent(txt); } }
   if(el.dataset.filter){ S.ui.filters[el.dataset.filter]=el.value; if(el.tagName==="INPUT"){ clearTimeout(window._ft); window._ft=setTimeout(()=>{ const pos=el.selectionStart; render(); const n=$("#fq"); if(n){ n.focus(); n.setSelectionRange(pos,pos);} },250);} }
   if(el.id==="meName"){ S.d.me=el.value; clearTimeout(window._mt); window._mt=setTimeout(()=>safe(()=>store.saveConfig({me:el.value.trim()})),800); }
 });
