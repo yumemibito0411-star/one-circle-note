@@ -1237,9 +1237,23 @@ document.addEventListener("click", e=>{
   e.preventDefault(); const h=a.getAttribute("href");
   setTimeout(()=>{ if(location.hash!==h) location.hash=h; else render(); },0);
 });
+/* 保存系のボタンは、処理中にもう一度押されても無視する（二重登録の防止） */
+const INFLIGHT = new Set();
+const GUARDED = ["createPerson","saveProfile","addAction","doneAction","dropAction","addLog","delLog","delPerson","applyAI","loadJson","saveHo","sentHo","delHo","saveTpl","resetTpl","saveGoals","saveBiz","addBiz","addMember","memberOp"];
 document.addEventListener("click", async e=>{
   const el=e.target.closest("[data-act]"); if(!el || el.tagName==="SELECT" || (el.tagName==="INPUT"&&el.type==="checkbox")) return;
   const a=el.dataset.act, pid=el.dataset.pid;
+  if(GUARDED.includes(a)){
+    const k=a+":"+(pid||"");
+    if(INFLIGHT.has(k)) return;
+    INFLIGHT.add(k); el.disabled=true; el.setAttribute("aria-busy","true");
+    try{ await onAct(e, el, a, pid); }
+    finally{ INFLIGHT.delete(k); if(el.isConnected){ el.disabled=false; el.removeAttribute("aria-busy"); } }
+    return;
+  }
+  await onAct(e, el, a, pid);
+});
+async function onAct(e, el, a, pid){
   const p = pid && S.people.get(pid);
   switch(a){
     case "toggleTodos": S.ui.allTodos=!S.ui.allTodos; render(); return;
@@ -1260,10 +1274,13 @@ document.addEventListener("click", async e=>{
     case "filterTo": S.ui.filters={q:"",temp:"",biz:el.dataset.biz,phase:el.dataset.phase}; break;
     case "createPerson": {
       const name=draft("n_name").trim(); if(!name){ toast("名前を入れてください"); return; }
-      const id=uid(); const now=new Date().toISOString();
+      // 同じ入力内容での再送は同じIDを使う（通信が遅くて押し直しても1人分にしかならない）
+      const id=S.d.n_id || (S.d.n_id=uid()); const now=new Date().toISOString();
+      el.textContent="追加中…";
       const data={name,kana:draft("n_kana").trim(),entry:draft("n_entry"),temp:draft("n_temp"),consent:!!draft("n_consent",false),memo:draft("n_memo").trim(),
         profile:{age:draft("n_age").trim(),relation:draft("n_relation").trim(),sns:draft("n_sns").trim(),referrer:draft("n_referrer").trim()},biz:{},needs:[],frustrations:[],talkPoints:[],avoid:[],actions:[],createdAt:now,updatedAt:now};
-      await safe(async()=>{ await store.setPerson(id,data); await store.addLog({personId:id,type:"new",text:"リストに追加"}); },"追加しました");
+      const ok=await safe(async()=>{ await store.setPerson(id,data); if(!S.logs.some(l=>l.personId===id && l.type==="new")) await store.addLog({personId:id,type:"new",text:"リストに追加"}); },"追加しました");
+      if(!ok){ el.textContent="追加して開く"; return; }
       for(const k of Object.keys(S.d)) if(k.startsWith("n_")) delete S.d[k];
       location.hash="#person-"+id; return;
     }
@@ -1327,7 +1344,7 @@ document.addEventListener("click", async e=>{
       try{ const m=raw.match(/\{[\s\S]*\}/); r=JSON.parse(m?m[0]:raw); }catch(_){}
       S.ai[pid] = r ? {result:r} : {msg:"JSONとして読み取れませんでした。AIの返答の { から } までを貼ってください。"}; render(); return;
     }
-    case "applyAI": applyAI(pid); return;
+    case "applyAI": await applyAI(pid); return;
     case "discardAI": delete S.ai[pid]; render(); return;
     /* LINE共有 */
     case "newHo": hoLoad(null, pid||""); delete S.ai.points; goShare(); return;
@@ -1336,8 +1353,8 @@ document.addEventListener("click", async e=>{
     case "aiPoints": aiPoints(); return;
     case "copyPointsPrompt": { const pp=S.people.get(draft("ho_person")); if(pp) copyText(pointsPrompt(pp,draft("ho_kind"),draft("ho_biz"),draft("ho_mgr"))); return; }
     case "copyHo": copyText(hoFill()); return;
-    case "saveHo": saveHo(false); return;
-    case "sentHo": saveHo(true); return;
+    case "saveHo": await saveHo(false); return;
+    case "sentHo": await saveHo(true); return;
     case "askDelHo": S.ui.confirm="ho:"+S.ui.hoId; render(); return;
     case "delHo": { const id=S.ui.hoId; S.ui.confirm=null; S.ui.hoOpen=false; S.ui.hoId=null; await safe(()=>store.deleteHandoff(id),"削除しました"); render(); return; }
     case "saveTpl": {
@@ -1372,7 +1389,7 @@ document.addEventListener("click", async e=>{
       await safe(()=>store.saveConfig({businesses:bs}),"事業を追加しました（名前を変えて保存してください）"); render(); return;
     }
   }
-});
+}
 
 /* ============ 起動 ============ */
 function makeAI(){
