@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ONE CIRCLE ノート</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -204,6 +205,23 @@ ul.dots{margin:4px 0 0;padding-left:1.2em} ul.dots li{margin:2px 0}
 summary{cursor:pointer}
 code{font-size:12px;background:var(--soft);border-radius:4px;padding:0 4px}
 @media (prefers-reduced-motion:no-preference){.btn,.nav a,.prow{transition:background .16s,color .16s,border-color .16s}}
+/* 日々の操作を指で押しやすくする */
+.btn{min-height:36px;justify-content:center}
+summary{min-height:40px;display:list-item;font-weight:700;padding:10px 0}
+details[open]>summary{margin-bottom:12px}
+.quick-actions{display:flex;gap:8px;flex-wrap:wrap}
+.todo .body{overflow-wrap:anywhere}
+@media(max-width:860px){
+  input[type=text],input[type=date],input[type=number],input[type=datetime-local],input:not([type]),select,textarea,label.f > *{font-size:16px;min-height:44px}
+  .bnav a{min-height:48px;justify-content:center}
+  .btn{min-height:44px}
+  summary{min-height:44px}
+  .card{padding:16px}
+  .todo li{flex-wrap:wrap;gap:8px}
+  .todo .when{width:54px}
+  .todo .body{flex-basis:calc(100% - 66px)}
+  .quick-actions .btn{flex:1}
+}
 </style>
 
 <div class="app">
@@ -219,7 +237,7 @@ code{font-size:12px;background:var(--soft);border-radius:4px;padding:0 4px}
   </div>
 </div>
 <nav class="bnav" id="bnav" aria-label="メニュー"></nav>
-<div class="toast" id="toast" hidden></div>
+<div role="status" aria-live="polite" class="toast" id="toast" hidden></div>
 <script type="application/json" id="boot">__BOOT__</script>
 <script>
 /* ============ 定数・設定 ============ */
@@ -350,12 +368,13 @@ function call(action, payload){
 }
 const GLOBAL_KEYS = ["businesses","kinds","lineTemplate"];
 const store = {
-  async setPerson(id, data){ S.people.set(id,{id,...data}); render(); await call("savePerson",{person:{id,...data}}); },
+  async setPerson(id, data){ await call("savePerson",{person:{id,...data}}); S.people.set(id,{id,...data}); render(); },
   async updatePerson(id, patch){
     patch.updatedAt = new Date().toISOString();
     const p = S.people.get(id); if(!p) return;
-    deepMerge(p, patch); render();
-    await call("savePerson",{person:p});
+    const next = deepMerge(JSON.parse(JSON.stringify(p)), patch);
+    await call("savePerson",{person:next});
+    S.people.set(id,next); render();
   },
   async deletePerson(id){
     S.people.delete(id); S.logs=S.logs.filter(l=>l.personId!==id); S.handoffs=S.handoffs.filter(h=>h.personId!==id); render();
@@ -363,8 +382,8 @@ const store = {
   },
   async addLog(log){
     const data = {id:uid(), date:today(), createdAt:new Date().toISOString(), ...log};
-    S.logs.unshift(data); render();
     await call("addLog",{log:data});
+    S.logs.unshift(data); render();
   },
   async deleteLog(id){ S.logs=S.logs.filter(l=>l.id!==id); render(); await call("deleteLog",{id}); },
   async saveHandoff(id, data){
@@ -386,8 +405,8 @@ const isAdmin = () => S.me && S.me.role==="admin";
 const isLeader = () => S.me && (S.me.role==="leader" || S.me.role==="admin");
 function deepMerge(t, s){ for(const k in s){ if(s[k] && typeof s[k]==="object" && !Array.isArray(s[k])){ t[k]=t[k]&&typeof t[k]==="object"?t[k]:{}; deepMerge(t[k],s[k]); } else t[k]=s[k]; } return t; }
 async function safe(fn, okMsg){
-  try{ await fn(); if(okMsg) toast(okMsg); }
-  catch(e){ console.error(e); toast(e && e.code==="forbidden" ? "この操作をする権限がありません" : "保存できませんでした。通信を確認して「最新にする」を押してください"); }
+  try{ await fn(); if(okMsg) toast(okMsg); return true; }
+  catch(e){ console.error(e); toast(e && e.code==="forbidden" ? "この操作をする権限がありません" : "保存できませんでした。通信を確認して「最新にする」を押してください"); return false; }
 }
 
 /* ============ 集計 ============ */
@@ -485,7 +504,7 @@ function render(){
   if(S.mode!=="ready"){
     $("#nav").innerHTML=""; $("#bnav").innerHTML=""; $("#banner").innerHTML="";
     document.querySelectorAll(".logo").forEach(el=>el.innerHTML = fullRing(30));
-    main.innerHTML = S.mode==="loading" ? `<div class="empty">読み込み中…</div>`
+    main.innerHTML = S.mode==="loading" ? `<div class="empty" role="status" aria-live="polite">ノートを読み込んでいます…<p class="hint">通信状況によって少し時間がかかります。</p></div>`
       : S.mode==="nokey" ? `<div class="empty"><b>このリンクでは開けません</b><p>個人用のURL（末尾に ?k= が付いたもの）で開いてください。分からないときは管理者に聞いてください。</p></div>`
       : S.mode==="offline" ? `<div class="empty">このページは Google Apps Script のウェブアプリとして開いたときに動きます。</div>`
       : `<div class="empty">読み込めませんでした。<br><button class="btn" data-act="reload" style="margin-top:10px">もう一度読み込む</button></div>`;
@@ -499,7 +518,7 @@ function render(){
     + (S.canWrite?`<a href="#new" ${r.name==="new"?'aria-current="page"':""} style="margin-top:8px">${icon("plus")}人を追加</a>`:"")
     + (isAdmin()?`<a href="#members" ${r.name==="members"?'aria-current="page"':""}>${icon("key")}メンバー管理</a>`:"");
   $("#bnav").style.gridTemplateColumns = `repeat(${items.length},1fr)`;
-  $("#bnav").innerHTML = items.map(([k,l,ic,b])=>`<a href="#${k}" ${cur(k)?'aria-current="page"':""}>${icon(ic)}<span>${l.replace("・行動量","")}</span>${b?`<span class="badge">${b}</span>`:""}</a>`).join("");
+  $("#bnav").innerHTML = items.map(([k,l,ic,b])=>`<a href="#${k}" ${cur(k)?'aria-current="page"':""}>${icon(ic)}<span>${l.replace("・行動量","").replace("ダッシュボード","ホーム")}</span>${b?`<span class="badge">${b}</span>`:""}</a>`).join("");
   document.querySelectorAll(".logo").forEach(el=>el.innerHTML = fullRing(30));
   if(!(document.activeElement && document.activeElement.id==="meName")){
     $("#meBox").innerHTML = (S.canWrite
@@ -514,7 +533,7 @@ function render(){
   if(r.name==="members" && !isAdmin()){ main.innerHTML=`<div class="empty">管理者だけが見られるページです。</div>`; return; }
   main.innerHTML = r.name==="home"?vHome() : r.name==="list"?vList() : r.name==="person"?vPerson(r.id) : r.name==="new"?vNew() : r.name==="share"?vShare() : r.name==="team"?vTeam() : r.name==="members"?vMembers() : vGoals();
 }
-window.addEventListener("hashchange",()=>{ S.ui.editProfile=null; S.ui.confirm=null; S.ui.newMember=null; if(route().name==="team") S.team=null; render(); window.scrollTo(0,0); });
+window.addEventListener("hashchange",()=>{ S.ui.editProfile=null; S.ui.confirm=null; S.ui.newMember=null; if(route().name==="team") S.team=null; render(); window.scrollTo(0,0); if(S.ui.recordTarget && route().id===S.ui.recordTarget){ S.ui.recordTarget=null; $("#person-record")?.scrollIntoView({block:"start"}); $("#lg_text")?.focus(); } });
 
 /* ============ ダッシュボード ============ */
 function kpiTiles(mk){
@@ -542,11 +561,11 @@ function vHome(){
   const todo = [
     ...hb.map(h=>({kind:"ho",h,p:S.people.get(h.personId)})), ...late.map(x=>({kind:"act",...x})), ...fu.map(x=>({kind:"fu",...x})), ...soon.map(x=>({kind:"act",...x})),
   ];
-  const todoHtml = todo.length ? `<ul class="plain todo">` + todo.slice(0,12).map(x=>{
+  const todoHtml = todo.length ? `<ul class="plain todo">` + todo.slice(0,S.ui.allTodos?todo.length:12).map(x=>{
     if(x.kind==="ho") return `<li><span class="when late">${md(x.h.datetime)}</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${esc(x.h.kind||"面談")}が終わりました。内容を聞いて「戻す」</div><button class="btn sm" data-act="openHo" data-hid="${x.h.id}">記入</button></li>`;
     if(x.kind==="act"){ const dl=dueLabel(x.a.due);
-      return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${esc(x.a.text)}</div>${S.canWrite?`<button class="btn sm" data-act="doneAction" data-pid="${x.p.id}" data-aid="${x.a.id}">完了</button>`:""}</li>`; }
-    return `<li><span class="when late">${x.days}日</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${bizChip(x.b.key,x.st.status)} のまま動きなし。結果を聞いて「戻す」</div></li>`;
+      return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${esc(x.a.text)}</div>${S.canWrite?`<button class="btn sm" data-act="doneAction" data-pid="${x.p.id}" data-aid="${x.a.id}">完了</button><button class="btn sm" data-act="quickLog" data-pid="${x.p.id}" data-type="contact">接触を記録</button><button class="btn sm" data-act="newHo" data-pid="${x.p.id}">LINE共有</button>`:""}</li>`; }
+    return `<li><span class="when late">${x.days}日</span><div class="body"><a class="who" href="#person-${x.p.id}">${nameOf(x.p)}</a>　${bizChip(x.b.key,x.st.status)} のまま動きなし。結果を聞いて「戻す」</div>${S.canWrite?`<button class="btn sm" data-act="openRecord" data-pid="${x.p.id}">結果を記録</button><button class="btn sm" data-act="newHo" data-pid="${x.p.id}">LINE共有</button>`:""}</li>`;
   }).join("") + `</ul>` : `<p class="muted" style="margin:0">期限が近いアクションはありません。</p>`;
   const cols = ["proposed","connected","won","ended","lost"];
   const pipe = `<div class="scroll-x"><table class="tbl"><thead><tr><th>事業</th>${cols.map(c=>`<th>${PHASES[c]}</th>`).join("")}</tr></thead><tbody>` +
@@ -556,10 +575,10 @@ function vHome(){
       return `<tr><td>${bizChip(b.key)}</td>${cols.map(c=>`<td><a href="#list" data-act="filterTo" data-biz="${b.key}" data-phase="${c}" style="text-decoration:none"><span class="n ${cnt[c]?"":"z"}">${cnt[c]}</span></a></td>`).join("")}</tr>`;
     }).join("") + `</tbody></table></div>`;
   return `${hd}<div class="stack">
+    <section class="card"><div class="sec-title"><h2>今やること</h2><span class="muted">${todo.length}件</span></div>${todoHtml}${todo.length>12?`<button class="btn" data-act="toggleTodos">${S.ui.allTodos?"12件に戻す":"すべて表示"}</button>`:""}</section>
     ${kpiTiles(mk)}
     ${ns.length?`<div class="notice ai"><span class="ailabel">${icon("spark")} AI</span> <b>面談の解析がまだの人が${ns.length}人います。</b>文字起こしを貼ると、伝える内容と次のアクションが入ります。<div class="row" style="margin-top:8px">${ns.slice(0,6).map(p=>`<a class="chip" href="#person-${p.id}">${nameOf(p)}</a>`).join("")}</div></div>`:""}
     <div class="grid2">
-      <section class="card"><div class="sec-title"><h2>今やること</h2><span class="muted">期限切れ・今日・3日以内・戻す漏れ</span></div>${todoHtml}</section>
       <section class="card"><div class="sec-title"><h2>事業別パイプライン</h2><span class="muted">数字を押すと一覧へ</span></div>${pipe}
         <p class="hint">「提案・つないだ」のまま7日動きがないと、今やることに「戻す」が出ます。</p></section>
     </div>
@@ -617,6 +636,8 @@ function vNew(){
   <section class="card stack" style="max-width:760px">
     <div class="fields">
       <label class="f">名前（必須）<input id="n_name" type="text" data-d="n_name" value="${esc(draft("n_name"))}"></label>
+    </div>
+    <details><summary>詳しい情報を追加（任意）</summary><div class="fields">
       <label class="f">ふりがな<input id="n_kana" type="text" data-d="n_kana" value="${esc(draft("n_kana"))}"></label>
       <label class="f">年齢<input id="n_age" type="text" data-d="n_age" value="${esc(draft("n_age"))}" placeholder="例：24"></label>
       <label class="f">出会い・関係<input id="n_relation" type="text" data-d="n_relation" value="${esc(draft("n_relation"))}" placeholder="例：SNS／サークルで知り合った"></label>
@@ -626,6 +647,7 @@ function vNew(){
       <label class="f">温度感<select id="n_temp" data-d="n_temp">${["","A","B","C"].map(t=>`<option value="${t}" ${draft("n_temp")===t?"selected":""}>${t||"未設定"}</option>`).join("")}</select></label>
     </div>
     <label class="f">メモ（任意）<textarea id="n_memo" rows="3" data-d="n_memo" placeholder="例：ダンサーとインストラクターをメインで活動">${esc(draft("n_memo"))}</textarea></label>
+    </details>
     <label class="row small"><input id="n_consent" type="checkbox" data-d="n_consent" ${draft("n_consent")?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
     <div class="row"><button class="btn pri" data-act="createPerson">追加して開く</button><a class="btn" href="#list">やめる</a></div>
   </section>`;
@@ -672,13 +694,13 @@ function vPerson(id){
   }).join("");
   const acts = (p.actions||[]).filter(a=>!a.done).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
   const actHtml = `<ul class="plain todo">${acts.map(a=>{ const dl=dueLabel(a.due); return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body">${esc(a.text)}</div>${W?`<button class="btn sm" data-act="doneAction" data-pid="${id}" data-aid="${a.id}">完了</button><button class="btn sm ghost" data-act="dropAction" data-pid="${id}" data-aid="${a.id}" aria-label="削除">×</button>`:""}</li>`; }).join("") || `<li class="muted">次のアクションがありません。1つ決めておくと漏れません。</li>`}</ul>
-    ${W?`<div class="row" style="margin-top:10px"><input id="na_text" type="text" style="flex:2;min-width:160px" placeholder="例：来週の休みを聞いてサークル体験に誘う" data-d="na_${id}" value="${esc(draft("na_"+id))}"><input id="na_due" type="date" style="flex:1;min-width:130px" data-d="nd_${id}" value="${esc(draft("nd_"+id))}"><button class="btn" data-act="addAction" data-pid="${id}">追加</button></div>`:""}`;
+    ${W?`<div class="row" style="margin-top:10px"><input id="na_text" type="text" style="flex:2;min-width:160px" placeholder="例：来週の休みを聞いてサークル体験に誘う" data-d="na_${id}" value="${esc(draft("na_"+id))}"><input id="na_due" type="date" style="flex:1;min-width:130px" data-d="nd_${id}" value="${esc(draft("nd_"+id,today()))}"><button class="btn" data-act="addAction" data-pid="${id}">追加</button></div>`:""}`;
   const tl = logs.length ? `<ul class="plain tl">${logs.slice(0,40).map(l=>{ const b=l.biz&&bizBy(l.biz); return `<li style="--c:${b?`var(${b.color})`:"var(--sub)"}"><div class="meta">${md(l.date)}・<b>${esc(LOG_TYPES[l.type]||l.type)}</b>${b?`・${esc(b.name)}`:""}${W?` <button class="btn sm ghost" style="padding:0 6px" data-act="askDelLog" data-lid="${l.id}">削除</button>`:""}${S.ui.confirm==="log:"+l.id?` <button class="btn sm warnb" data-act="delLog" data-lid="${l.id}">本当に削除</button>`:""}</div>${l.text?`<div class="txt">${esc(l.text)}</div>`:""}</li>`; }).join("")}</ul>` : `<p class="muted" style="margin:0">記録はまだありません。</p>`;
   const logForm = W?`<div class="stack" style="gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
       <div class="fields"><label class="f">種類<select id="lg_type" data-d="lt_${id}">${["contact","meeting","report","note"].map(k=>`<option value="${k}" ${draft("lt_"+id,"contact")===k?"selected":""}>${LOG_TYPES[k]}</option>`).join("")}</select></label>
       <label class="f">事業（任意）<select id="lg_biz" data-d="lb_${id}"><option value="">—</option>${biz().map(b=>`<option value="${b.key}" ${draft("lb_"+id)===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
       <label class="f">日付<input id="lg_date" type="date" data-d="ld_${id}" value="${esc(draft("ld_"+id,today()))}"></label></div>
-      <textarea id="lg_text" rows="2" placeholder="何を話した？結果は？" data-d="lx_${id}">${esc(draft("lx_"+id))}</textarea>
+      <textarea id="lg_text" aria-label="記録の内容" rows="2" placeholder="何を話した？結果は？" data-d="lx_${id}">${esc(draft("lx_"+id))}</textarea>
       <div><button class="btn" data-act="addLog" data-pid="${id}">記録する</button></div></div>`:"";
   const hos = S.handoffs.filter(h=>h.personId===id);
   const hoHtml = `<section class="card"><div class="between" style="margin-bottom:12px"><h2>面談につなぐ</h2>${W?`<button class="btn pri sm" data-act="newHo" data-pid="${id}">${icon("share")}LINE共有をつくる</button>`:""}</div>
@@ -690,19 +712,20 @@ function vPerson(id){
       <div class="row">${W&&!editing?`<button class="btn" data-act="editProfile" data-pid="${id}">プロフィール編集</button>`:""}<a class="btn" href="#list">← リスト</a></div>
     </div>
     ${p.summary?`<div class="notice"><span class="eyebrow">最新の状況</span><div>${esc(p.summary)}</div></div>`:""}
+    ${W?`<div class="quick-actions"><button class="btn pri" data-act="quickLog" data-pid="${id}" data-type="contact">今日の接触を記録</button><button class="btn" data-act="quickLog" data-pid="${id}" data-type="meeting">今日の面談を記録</button><button class="btn line" data-act="newHo" data-pid="${id}">LINE共有をつくる</button></div>`:""}
+    <section class="card"><div class="sec-title"><h2>次のアクション</h2></div>${actHtml}</section>
+    <section class="card" id="person-record"><div class="sec-title"><h2>記録する</h2></div>${logForm}<details><summary>これまでの記録（${logs.length}件）</summary>${tl}</details></section>
     <div class="grid2">
       <div class="stack">
-        <section class="card"><div class="sec-title"><h2>プロフィール</h2></div>${prof}</section>
-        ${editing?"":`<section class="card stack" style="gap:12px"><h2>ニーズと伝えること</h2>
+        <details class="card" ${editing?"open":""}><summary>プロフィール${editing?"を編集":"・連絡先"}</summary>${prof}</details>
+        ${editing?"":`<details class="card"><summary>ニーズと伝えること</summary><div class="stack">
           ${listBlock("ニーズ・やりたいこと",p.needs)}${listBlock("不満・困りごと",p.frustrations)}
-          ${listBlock("伝えると効果的なこと",p.talkPoints,"var(--ok)")}${listBlock("避けたほうがいい話",p.avoid,"var(--bad)")}</section>`}
+          ${listBlock("伝えると効果的なこと",p.talkPoints,"var(--ok)")}${listBlock("避けたほうがいい話",p.avoid,"var(--bad)")}</div></details>`}
         <section class="card"><div class="sec-title"><h2>6事業の状況</h2><span class="muted">変えると自動で記録・カウント</span></div><div class="biztable">${bizRows}</div></section>
       </div>
       <div class="stack">
-        <section class="card"><div class="sec-title"><h2>次のアクション</h2></div>${actHtml}</section>
         ${hoHtml}
         ${W?aiPanel(p):""}
-        <section class="card"><div class="sec-title"><h2>記録</h2><span class="muted">${logs.length}件</span></div>${tl}${logForm}</section>
         ${W?`<section class="card"><div class="between"><span class="muted small">この人をリストから削除（記録・共有文面も消えます）</span>${S.ui.confirm==="person:"+id?`<div class="row"><button class="btn warnb" data-act="delPerson" data-pid="${id}">削除する（元に戻せません）</button><button class="btn" data-act="cancelConfirm">やめる</button></div>`:`<button class="btn sm warnb" data-act="askDelPerson" data-pid="${id}">削除</button>`}</div></section>`:""}
       </div>
     </div>
@@ -1063,7 +1086,7 @@ ${base}`,{cache:false});
 const ROLE_LABEL = {member:"メンバー", leader:"リーダー", admin:"管理者"};
 function vTeam(){
   const mk = monthKey(new Date()), pi = paceInfo(mk);
-  if(S.team===null){ setTimeout(loadTeam,0); return `<div class="empty">読み込み中…</div>`; }
+  if(S.team===null){ setTimeout(loadTeam,0); return `<div class="empty" role="status" aria-live="polite">チームの数字を集計しています…</div>`; }
   if(S.team==="loading") return `<div class="empty">チームの数字を集計しています…</div>`;
   if(S.team==="error") return `<div class="empty">集計できませんでした。<br><button class="btn" data-act="teamReload" style="margin-top:10px">もう一度</button></div>`;
   const ms = [...S.team].sort((a,b)=>(b.counts.connect+b.counts.won)-(a.counts.connect+a.counts.won) || b.counts.contact-a.counts.contact);
@@ -1219,6 +1242,21 @@ document.addEventListener("click", async e=>{
   const a=el.dataset.act, pid=el.dataset.pid;
   const p = pid && S.people.get(pid);
   switch(a){
+    case "toggleTodos": S.ui.allTodos=!S.ui.allTodos; render(); return;
+    case "openRecord":
+      S.ui.recordTarget=pid;
+      if(location.hash!=="#person-"+pid) location.hash="#person-"+pid;
+      else { render(); $("#person-record").scrollIntoView({block:"start"}); $("#lg_text")?.focus(); }
+      return;
+    case "quickLog": {
+      if(!S.canWrite || !p || S.ui.quickSaving) return;
+      const type=el.dataset.type;
+      if(!["contact","meeting"].includes(type)) return;
+      S.ui.quickSaving=true; el.disabled=true;
+      try{ await safe(()=>store.addLog({personId:pid,type,date:today(),text:""}),LOG_TYPES[type]+"を今日の記録に追加しました"); }
+      finally{ S.ui.quickSaving=false; render(); }
+      return;
+    }
     case "filterTo": S.ui.filters={q:"",temp:"",biz:el.dataset.biz,phase:el.dataset.phase}; break;
     case "createPerson": {
       const name=draft("n_name").trim(); if(!name){ toast("名前を入れてください"); return; }
@@ -1239,20 +1277,23 @@ document.addEventListener("click", async e=>{
     }
     case "addAction": {
       const text=draft("na_"+pid).trim(); if(!text){ toast("アクションを書いてください"); return; }
-      const acts=[...(p.actions||[]),{id:uid(),text,due:draft("nd_"+pid),done:false}];
-      delete S.d["na_"+pid]; delete S.d["nd_"+pid];
-      await safe(()=>store.updatePerson(pid,{actions:acts}),"追加しました"); render(); return;
+      const acts=[...(p.actions||[]),{id:uid(),text,due:draft("nd_"+pid,today()),done:false}];
+      const saved=await safe(()=>store.updatePerson(pid,{actions:acts}),"追加しました");
+      if(saved){ delete S.d["na_"+pid]; delete S.d["nd_"+pid]; }
+      render(); return;
     }
     case "doneAction": {
-      const act=(p.actions||[]).find(x=>x.id===el.dataset.aid); if(!act) return;
+      const act=(p.actions||[]).find(x=>x.id===el.dataset.aid); if(!S.canWrite || !act || act.done || S.ui.completing) return;
+      S.ui.completing=true;
       const acts=(p.actions||[]).map(x=>x.id===act.id?{...x,done:true,doneAt:today()}:x);
-      await safe(async()=>{ await store.updatePerson(pid,{actions:acts}); await store.addLog({personId:pid,type:"contact",text:"✓ "+act.text}); },"完了しました（接触として記録）"); return;
+      try{ await safe(async()=>{ await store.updatePerson(pid,{actions:acts}); await store.addLog({personId:pid,type:"contact",text:"✓ "+act.text}); },"完了しました（接触として記録）"); } finally{ S.ui.completing=false; } return;
     }
     case "dropAction": await safe(()=>store.updatePerson(pid,{actions:(p.actions||[]).filter(x=>x.id!==el.dataset.aid)})); return;
     case "addLog": {
       const text=draft("lx_"+pid).trim(); const type=draft("lt_"+pid,"contact");
       if(!text && type==="note"){ toast("メモを書いてください"); return; }
-      await safe(()=>store.addLog({personId:pid,type,biz:draft("lb_"+pid)||"",date:draft("ld_"+pid,today()),text}),"記録しました");
+      const saved=await safe(()=>store.addLog({personId:pid,type,biz:draft("lb_"+pid)||"",date:draft("ld_"+pid,today())||today(),text}),"記録しました");
+      if(!saved) return;
       delete S.d["lx_"+pid]; render(); return;
     }
     case "askDelLog": S.ui.confirm="log:"+el.dataset.lid; render(); return;
