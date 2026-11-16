@@ -828,7 +828,7 @@ function previewHtml(p, r){
   </div>`;
 }
 let aiCtl = {};
-const aiErr = e => ({cancelled:"", no_key:"AIのキーが設定されていません。「AI用にコピー」から手動で使えます。", refused:"AIがこの内容への回答を控えました。文面を変えるか、手動で入力してください。", rate_limited:"AIの利用が混み合っています。少し待ってからもう一度押してください。", invalid_json:"AIの返答を読み取れませんでした。もう一度押すか、文字起こしを短くしてください。", prompt_too_large:"文字起こしが長すぎます。半分ずつ解析してください。"}[e && e.code] ?? "AIに接続できませんでした。もう一度お試しください。");
+const aiErr = e => ({cancelled:"", no_key:"AIのキーが設定されていません。「AI用にコピー」から手動で使えます。", refused:"AIがこの内容への回答を控えました。文面を変えるか、手動で入力してください。", rate_limited:"AIの利用が混み合っています。少し待ってからもう一度押してください。", invalid_json:"AIの返答を読み取れませんでした。もう一度押すか、文字起こしを短くしてください。", prompt_too_large:"文字起こしが長すぎます。半分ずつ解析してください。", too_long:"文字起こしなどの入力が長すぎます。短くして、分けて解析してください。", ai_error:"AIの解析に失敗しました。もう一度試すか、「AI用にコピー」から手動で使ってください。"}[e && e.code] ?? "AIに接続できませんでした。もう一度お試しください。");
 async function runAnalyze(id){
   const p=S.people.get(id); const tr=draft("tr_"+id).trim();
   if(!tr){ S.ai[id]={msg:"文字起こしを貼り付けてください"}; render(); return; }
