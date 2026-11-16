@@ -658,7 +658,6 @@ function vNew(){
     </div>
     <label class="f">メモ（任意）<textarea id="n_memo" rows="3" data-d="n_memo" placeholder="例：ダンサーとインストラクターをメインで活動">${esc(draft("n_memo"))}</textarea></label>
     </details>
-    <label class="row small"><input id="n_consent" type="checkbox" data-d="n_consent" ${draft("n_consent")?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
     <div class="row"><button class="btn pri" data-act="createPerson">追加して開く</button><a class="btn" href="#list">やめる</a></div>
   </section>`;
 }
@@ -701,10 +700,9 @@ function vPerson(id){
       <label class="f">不満・困りごと（1行に1つ）<textarea id="e_frus" rows="3" data-d="e_frus">${esc(draft("e_frus",(p.frustrations||[]).join("\n")))}</textarea></label>
       <label class="f">伝えると効果的なこと（1行に1つ）<textarea id="e_talk" rows="3" data-d="e_talk">${esc(draft("e_talk",(p.talkPoints||[]).join("\n")))}</textarea></label>
       <label class="f">避けたほうがいい話（1行に1つ）<textarea id="e_avoid" rows="2" data-d="e_avoid">${esc(draft("e_avoid",(p.avoid||[]).join("\n")))}</textarea></label>
-      <label class="row small"><input id="e_consent" type="checkbox" data-d="e_consent" ${draft("e_consent",!!p.consent)?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
       <div class="row"><button class="btn pri" data-act="saveProfile" data-pid="${id}">保存</button><button class="btn" data-act="cancelProfile">やめる</button></div>
     </div>`
-    : `<div class="stack">${profileGroups(p,W)}<dl class="kv"><dt>メモ</dt><dd>${esc(p.memo||"未入力")}</dd><dt>入口の事業</dt><dd>${p.entry?bizChip(p.entry):"未定"}</dd><dt>本人同意</dt><dd>${p.consent?"伝えている":"未確認"}</dd></dl></div>`;
+    : `<div class="stack">${profileGroups(p,W)}<dl class="kv"><dt>メモ</dt><dd>${esc(p.memo||"未入力")}</dd><dt>入口の事業</dt><dd>${p.entry?bizChip(p.entry):"未定"}</dd></dl></div>`;
   const listBlock = (title, arr, color) => `<div><h3 style="color:${color||"inherit"}">${title}</h3>${(arr||[]).length?`<ul class="dots">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="muted small" style="margin:2px 0">まだありません</p>`}</div>`;
   const bizRows = biz().map(b=>{
     const st = (p.biz||{})[b.key] || {}; const fit = (p.fit||{})[b.key];
