@@ -222,6 +222,14 @@ details[open]>summary{margin-bottom:12px}
   .todo .body{flex-basis:calc(100% - 66px)}
   .quick-actions .btn{flex:1}
 }
+.profile-value{border:0;background:transparent;color:inherit;text-align:left;padding:6px 0;min-height:44px;width:100%;overflow-wrap:anywhere}
+.kv dd,.ptop>div{min-width:0;overflow-wrap:anywhere}
+.kv{align-items:center}
+.kv dt{padding-top:0}
+.biz-editor{border-top:1px solid var(--line);padding:10px 0;min-width:0}
+.biz-editor summary{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:44px}
+.biz-editor summary span{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:520px){.ptop{width:100%}.ptop>div{flex:1}.kv{grid-template-columns:95px minmax(0,1fr)}.row>details{max-width:100%}}
 </style>
 
 <div class="app">
@@ -301,7 +309,7 @@ const METRICS = [
 ];
 const LOG_TYPES = {contact:"連絡", meeting:"面談", propose:"提案", connect:"つなぎ", won:"成立", report:"戻す（結果報告）", new:"リスト追加", note:"メモ", action:"アクション完了"};
 const PHASE_TO_LOG = {proposed:"propose", connected:"connect", won:"won"};
-const PROFILE_FIELDS = [["age","年齢"],["job","仕事・活動"],["area","住まい・地域"],["family","家族・暮らし"],["hobbies","趣味・好き"],["personality","人柄"],["relation","出会い・関係"],["referrer","紹介者"],["sns","SNS・連絡先"]];
+const PROFILE_FIELDS = [["age","年齢"],["job","職業・仕事"],["area","住まい（エリア）"],["family","家族・暮らし"],["hobbies","趣味・好き"],["personality","人柄"],["relation","出会い・関係"],["referrer","紹介者"],["sns","SNS・連絡先"]];
 const ICONS = {
   home:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   list:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -640,6 +648,8 @@ function vNew(){
     <details><summary>詳しい情報を追加（任意）</summary><div class="fields">
       <label class="f">ふりがな<input id="n_kana" type="text" data-d="n_kana" value="${esc(draft("n_kana"))}"></label>
       <label class="f">年齢<input id="n_age" type="text" data-d="n_age" value="${esc(draft("n_age"))}" placeholder="例：24"></label>
+      <label class="f">職業・仕事<input type="text" data-d="n_job" value="${esc(draft("n_job"))}"></label>
+      <label class="f">住まい（エリア）<input type="text" data-d="n_area" value="${esc(draft("n_area"))}"></label>
       <label class="f">出会い・関係<input id="n_relation" type="text" data-d="n_relation" value="${esc(draft("n_relation"))}" placeholder="例：SNS／サークルで知り合った"></label>
       <label class="f">SNS・連絡先<input id="n_sns" type="text" data-d="n_sns" value="${esc(draft("n_sns"))}" placeholder="InstagramのURLなど"></label>
       <label class="f">紹介者<input id="n_referrer" type="text" data-d="n_referrer" value="${esc(draft("n_referrer"))}"></label>
@@ -653,12 +663,31 @@ function vNew(){
   </section>`;
 }
 
+function ageText(value){ const v=String(value||"").trim(); return /^\d+$/.test(v)?v+"歳":v; }
+function profileValue(key,value){
+  if(!value) return '<span class="muted">未入力</span>';
+  if(key==="sns"){
+    try{ const u=new URL(value); if(["https:","http:"].includes(u.protocol)){
+      const host=u.hostname.toLowerCase(); const label=host==="instagram.com"||host.endsWith(".instagram.com")?"Instagram":host==="line.me"?"LINE":"連絡先";
+      return `<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer">${label}を開く ↗</a>`;
+    } }catch(_){}
+  }
+  return esc(key==="age"?ageText(value):value);
+}
+function profileGroups(p,W){
+  return [["基本",["age","job","area","family"]],["つながり",["relation","referrer","sns"]],["人柄・趣味",["personality","hobbies"]]].map(([title,keys])=>`<section><h3>${title}</h3><dl class="kv">${keys.map(k=>{
+    const label=PROFILE_FIELDS.find(f=>f[0]===k)[1], value=(p.profile||{})[k]||"", active=W&&S.ui.inlineProfile===p.id+":"+k;
+    return `<dt>${label}</dt><dd>${active?`<label class="f">${label}<input type="text" data-d="ip_${p.id}_${k}" value="${esc(draft("ip_"+p.id+"_"+k,value))}"></label><div class="row"><button class="btn sm pri" data-act="saveInline" data-pid="${p.id}" data-field="${k}">保存</button><button class="btn sm" data-act="cancelInline">やめる</button></div>`:`${k==="sns"&&value?profileValue(k,value):W?`<button class="profile-value" data-act="editInline" data-pid="${p.id}" data-field="${k}">${profileValue(k,value)}</button>`:profileValue(k,value)}${W&&k==="sns"&&value?` <button class="btn sm" data-act="editInline" data-pid="${p.id}" data-field="${k}">編集</button>`:""}`}</dd>`;
+  }).join("")}</dl></section>`).join("");
+}
+function actionDate(offset){ const d=new Date(); d.setDate(d.getDate()+offset); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+
 /* ============ 人物ページ ============ */
 function vPerson(id){
   const p = S.people.get(id);
   if(!p) return `<div class="empty">この人は見つかりません（削除された可能性があります）。<br><a class="btn" href="#list" style="margin-top:10px">リストへ戻る</a></div>`;
   const logs = S.logs.filter(l=>l.personId===id);
-  const W = S.canWrite; const editing = S.ui.editProfile===id;
+  const W = S.canWrite; const editing = W && S.ui.editProfile===id;
   const prof = editing ? `<div class="stack">
       <div class="fields">
         <label class="f">名前<input id="e_name" type="text" data-d="e_name" value="${esc(draft("e_name",p.name))}"></label>
@@ -675,31 +704,28 @@ function vPerson(id){
       <label class="row small"><input id="e_consent" type="checkbox" data-d="e_consent" ${draft("e_consent",!!p.consent)?"checked":""}> 本人に、紹介のために情報を記録することを伝えている</label>
       <div class="row"><button class="btn pri" data-act="saveProfile" data-pid="${id}">保存</button><button class="btn" data-act="cancelProfile">やめる</button></div>
     </div>`
-    : `<dl class="kv">
-        ${PROFILE_FIELDS.map(([k,l])=>(p.profile||{})[k]?`<dt>${l}</dt><dd>${esc(p.profile[k])}</dd>`:"").join("")}
-        ${p.memo?`<dt>メモ</dt><dd>${esc(p.memo)}</dd>`:""}
-        <dt>入口の事業</dt><dd>${p.entry?bizChip(p.entry):"未定"}</dd>
-        <dt>本人同意</dt><dd>${p.consent?"伝えている":`<span style="color:var(--warn)">未確認</span>`}</dd>
-      </dl>`;
+    : `<div class="stack">${profileGroups(p,W)}<dl class="kv"><dt>メモ</dt><dd>${esc(p.memo||"未入力")}</dd><dt>入口の事業</dt><dd>${p.entry?bizChip(p.entry):"未定"}</dd><dt>本人同意</dt><dd>${p.consent?"伝えている":"未確認"}</dd></dl></div>`;
   const listBlock = (title, arr, color) => `<div><h3 style="color:${color||"inherit"}">${title}</h3>${(arr||[]).length?`<ul class="dots">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="muted small" style="margin:2px 0">まだありません</p>`}</div>`;
   const bizRows = biz().map(b=>{
     const st = (p.biz||{})[b.key] || {}; const fit = (p.fit||{})[b.key];
-    return `<div class="bizrow">
+    return `<details class="biz-editor"><summary>${bizChip(b.key)} <span>${esc(st.status||b.statuses[0][0])}</span></summary><div class="stack" style="gap:8px;margin-top:10px">
       <div class="bn">${bizChip(b.key)}${st.updatedAt?`<small>${md(st.updatedAt.slice(0,10))} 更新</small>`:""}</div>
       ${W?`<select id="bs_${b.key}" data-act="setStatus" data-pid="${id}" data-biz="${b.key}" aria-label="${esc(b.name)}の状況">${b.statuses.map(s=>`<option ${(st.status||b.statuses[0][0])===s[0]?"selected":""}>${esc(s[0])}</option>`).join("")}</select>
-          <input id="bo_${b.key}" type="text" placeholder="つないだ先の担当" value="${esc(draft("bo_"+id+b.key, st.owner))}" data-d="bo_${id}${b.key}" data-act-blur="setOwner" data-pid="${id}" data-biz="${b.key}">`
+          ${PHASE_RANK[phaseOf(b.key,st.status)]>=2?`<label class="f">つないだ先の担当<input id="bo_${b.key}" type="text" placeholder="つないだ先の担当" value="${esc(draft("bo_"+id+b.key, st.owner))}" data-d="bo_${id}${b.key}" data-act-blur="setOwner" data-pid="${id}" data-biz="${b.key}"></label>`:""}`
         :`<span>${esc(st.status||"未提案")}</span><span class="muted">${esc(st.owner||"")}</span>`}
       ${fit?`<div class="fit">相性 <b>${esc(fit.level)}</b>：${esc(fit.reason)}</div>`:""}
-    </div>`;
+    </div></details>`;
   }).join("");
   const acts = (p.actions||[]).filter(a=>!a.done).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
   const actHtml = `<ul class="plain todo">${acts.map(a=>{ const dl=dueLabel(a.due); return `<li><span class="when ${dl.c}">${dl.t}</span><div class="body">${esc(a.text)}</div>${W?`<button class="btn sm" data-act="doneAction" data-pid="${id}" data-aid="${a.id}">完了</button><button class="btn sm ghost" data-act="dropAction" data-pid="${id}" data-aid="${a.id}" aria-label="削除">×</button>`:""}</li>`; }).join("") || `<li class="muted">次のアクションがありません。1つ決めておくと漏れません。</li>`}</ul>
-    ${W?`<div class="row" style="margin-top:10px"><input id="na_text" type="text" style="flex:2;min-width:160px" placeholder="例：来週の休みを聞いてサークル体験に誘う" data-d="na_${id}" value="${esc(draft("na_"+id))}"><input id="na_due" type="date" style="flex:1;min-width:130px" data-d="nd_${id}" value="${esc(draft("nd_"+id,today()))}"><button class="btn" data-act="addAction" data-pid="${id}">追加</button></div>`:""}`;
+    ${W?`<div class="row" style="margin-top:10px"><input id="na_text" type="text" style="flex:2;min-width:160px" placeholder="例：来週の休みを聞いてサークル体験に誘う" data-d="na_${id}" value="${esc(draft("na_"+id))}"><div class="row" role="group" aria-label="アクションの日付">${[[0,"今日"],[1,"明日"],[7,"来週"]].map(([n,l])=>`<button class="btn sm ${draft("nd_"+id,today())===actionDate(n)?"pri":""}" data-act="actionDate" data-pid="${id}" data-days="${n}" aria-pressed="${draft("nd_"+id,today())===actionDate(n)}">${l}</button>`).join("")}</div><details><summary>日付の詳細（${esc(draft("nd_"+id,today()))||"未定"}）</summary><label class="f">期限<input id="na_due" type="date" data-d="nd_${id}" value="${esc(draft("nd_"+id,today()))}"></label></details><button class="btn" data-act="addAction" data-pid="${id}">追加</button></div>`:""}`;
   const tl = logs.length ? `<ul class="plain tl">${logs.slice(0,40).map(l=>{ const b=l.biz&&bizBy(l.biz); return `<li style="--c:${b?`var(${b.color})`:"var(--sub)"}"><div class="meta">${md(l.date)}・<b>${esc(LOG_TYPES[l.type]||l.type)}</b>${b?`・${esc(b.name)}`:""}${W?` <button class="btn sm ghost" style="padding:0 6px" data-act="askDelLog" data-lid="${l.id}">削除</button>`:""}${S.ui.confirm==="log:"+l.id?` <button class="btn sm warnb" data-act="delLog" data-lid="${l.id}">本当に削除</button>`:""}</div>${l.text?`<div class="txt">${esc(l.text)}</div>`:""}</li>`; }).join("")}</ul>` : `<p class="muted" style="margin:0">記録はまだありません。</p>`;
   const logForm = W?`<div class="stack" style="gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-      <div class="fields"><label class="f">種類<select id="lg_type" data-d="lt_${id}">${["contact","meeting","report","note"].map(k=>`<option value="${k}" ${draft("lt_"+id,"contact")===k?"selected":""}>${LOG_TYPES[k]}</option>`).join("")}</select></label>
+      <div class="row" role="group" aria-label="記録の種類">${["contact","meeting","report","note"].map(k=>`<button class="btn ${draft("lt_"+id,"contact")===k?"pri":""}" data-act="logType" data-pid="${id}" data-type="${k}" aria-pressed="${draft("lt_"+id,"contact")===k}">${({contact:"連絡",meeting:"面談",report:"戻す",note:"メモ"})[k]}</button>`).join("")}</div>
+      <details><summary>詳細（事業・日付）</summary><div class="fields">
       <label class="f">事業（任意）<select id="lg_biz" data-d="lb_${id}"><option value="">—</option>${biz().map(b=>`<option value="${b.key}" ${draft("lb_"+id)===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
       <label class="f">日付<input id="lg_date" type="date" data-d="ld_${id}" value="${esc(draft("ld_"+id,today()))}"></label></div>
+</details>
       <textarea id="lg_text" aria-label="記録の内容" rows="2" placeholder="何を話した？結果は？" data-d="lx_${id}">${esc(draft("lx_"+id))}</textarea>
       <div><button class="btn" data-act="addLog" data-pid="${id}">記録する</button></div></div>`:"";
   const hos = S.handoffs.filter(h=>h.personId===id);
@@ -708,7 +734,7 @@ function vPerson(id){
       :`<p class="muted" style="margin:0">次につなぐ面談（転職面談・体験など）を決めたら、ここからリーダーにLINEで送る文面を作れます。</p>`}</section>`;
   return `<div class="stack">
     <div class="between">
-      <div class="ptop">${ring(p,52)}<div><h1>${nameOf(p)}</h1><div class="muted small">${esc(p.kana||"")}${p.kana?"・":""}最終接点 ${md(lastTouch(p))||"—"}・追加 ${md((p.createdAt||"").slice(0,10))}</div></div>${tempChip(p.temp)}</div>
+      <div class="ptop">${ring(p,52)}<div><h1>${nameOf(p)}</h1><div class="row small">${esc([ageText((p.profile||{}).age),(p.profile||{}).job,(p.profile||{}).area].filter(Boolean).join("・")||"年齢・職業・住まいは未入力")}<span>温度感 ${esc(p.temp||"未設定")}</span><span>入口：${p.entry?bizChip(p.entry):"未定"}</span></div><div class="muted small">${esc(p.kana||"")}${p.kana?"・":""}最終接点 ${md(lastTouch(p))||"—"}・追加 ${md((p.createdAt||"").slice(0,10))}</div></div>${tempChip(p.temp)}</div>
       <div class="row">${W&&!editing?`<button class="btn" data-act="editProfile" data-pid="${id}">プロフィール編集</button>`:""}<a class="btn" href="#list">← リスト</a></div>
     </div>
     ${p.summary?`<div class="notice"><span class="eyebrow">最新の状況</span><div>${esc(p.summary)}</div></div>`:""}
@@ -717,16 +743,16 @@ function vPerson(id){
     <section class="card" id="person-record"><div class="sec-title"><h2>記録する</h2></div>${logForm}<details><summary>これまでの記録（${logs.length}件）</summary>${tl}</details></section>
     <div class="grid2">
       <div class="stack">
-        <details class="card" ${editing?"open":""}><summary>プロフィール${editing?"を編集":"・連絡先"}</summary>${prof}</details>
+        <details class="card" open><summary>プロフィール${editing?"を編集":"・連絡先"}</summary>${prof}</details>
         ${editing?"":`<details class="card"><summary>ニーズと伝えること</summary><div class="stack">
           ${listBlock("ニーズ・やりたいこと",p.needs)}${listBlock("不満・困りごと",p.frustrations)}
           ${listBlock("伝えると効果的なこと",p.talkPoints,"var(--ok)")}${listBlock("避けたほうがいい話",p.avoid,"var(--bad)")}</div></details>`}
         <section class="card"><div class="sec-title"><h2>6事業の状況</h2><span class="muted">変えると自動で記録・カウント</span></div><div class="biztable">${bizRows}</div></section>
       </div>
       <div class="stack">
-        ${hoHtml}
-        ${W?aiPanel(p):""}
-        ${W?`<section class="card"><div class="between"><span class="muted small">この人をリストから削除（記録・共有文面も消えます）</span>${S.ui.confirm==="person:"+id?`<div class="row"><button class="btn warnb" data-act="delPerson" data-pid="${id}">削除する（元に戻せません）</button><button class="btn" data-act="cancelConfirm">やめる</button></div>`:`<button class="btn sm warnb" data-act="askDelPerson" data-pid="${id}">削除</button>`}</div></section>`:""}
+        <details class="card"><summary>面談につなぐ</summary>${hoHtml}</details>
+        ${W?`<details class="card"><summary>文字起こしから更新（AI）</summary>${aiPanel(p)}</details>`:""}
+        ${W?`<details class="card" ${S.ui.confirm==="person:"+id?"open":""}><summary>その他の操作</summary><div class="between"><span class="muted small">この人をリストから削除（記録・共有文面も消えます）</span>${S.ui.confirm==="person:"+id?`<div class="row"><button class="btn warnb" data-act="delPerson" data-pid="${id}">削除する（元に戻せません）</button><button class="btn" data-act="cancelConfirm">やめる</button></div>`:`<button class="btn sm warnb" data-act="askDelPerson" data-pid="${id}">削除</button>`}</div></details>`:""}
       </div>
     </div>
   </div>`;
@@ -1221,12 +1247,18 @@ document.addEventListener("change", e=>{
       .catch(()=>{ toast("変更できませんでした"); render(); });
     return;
   }
-  if(a==="setStatus"){ const {pid,biz:bk}=el.dataset; safe(()=>changeStatus(pid,bk,el.value), "更新しました"); }
+  if(a==="setStatus"){
+    if(!S.canWrite) return;
+    const {pid,biz:bk}=el.dataset, key="status:"+pid+":"+bk;
+    if(INFLIGHT.has(key)) return;
+    INFLIGHT.add(key); el.disabled=true;
+    safe(()=>changeStatus(pid,bk,el.value), "更新しました").finally(()=>{ INFLIGHT.delete(key); if(el.isConnected) el.disabled=false; });
+  }
   if(a==="shareSel"){ const id=el.dataset.pid; S.ui.shareSel = el.checked ? [...S.ui.shareSel,id] : S.ui.shareSel.filter(x=>x!==id); delete S.d.share_txt; render(); }
 });
 document.addEventListener("focusout", e=>{
   const el=e.target;
-  if(el.dataset && el.dataset.actBlur==="setOwner"){
+  if(S.canWrite && el.dataset && el.dataset.actBlur==="setOwner"){
     const {pid,biz:bk}=el.dataset; const p=S.people.get(pid); const cur=((p&&p.biz||{})[bk]||{}).owner||"";
     if(el.value.trim()!==cur) safe(()=>store.updatePerson(pid,{biz:{[bk]:{owner:el.value.trim()}}}),"担当を保存しました");
   }
@@ -1239,7 +1271,7 @@ document.addEventListener("click", e=>{
 });
 /* 保存系のボタンは、処理中にもう一度押されても無視する（二重登録の防止） */
 const INFLIGHT = new Set();
-const GUARDED = ["createPerson","saveProfile","addAction","doneAction","dropAction","addLog","delLog","delPerson","applyAI","loadJson","saveHo","sentHo","delHo","saveTpl","resetTpl","saveGoals","saveBiz","addBiz","addMember","memberOp"];
+const GUARDED = ["saveInline","createPerson","saveProfile","addAction","doneAction","dropAction","addLog","delLog","delPerson","applyAI","loadJson","saveHo","sentHo","delHo","saveTpl","resetTpl","saveGoals","saveBiz","addBiz","addMember","memberOp"];
 document.addEventListener("click", async e=>{
   const el=e.target.closest("[data-act]"); if(!el || el.tagName==="SELECT" || (el.tagName==="INPUT"&&el.type==="checkbox")) return;
   const a=el.dataset.act, pid=el.dataset.pid;
@@ -1255,7 +1287,18 @@ document.addEventListener("click", async e=>{
 });
 async function onAct(e, el, a, pid){
   const p = pid && S.people.get(pid);
+  if(!S.canWrite && ["editInline","saveInline","editProfile","saveProfile","actionDate","logType"].includes(a)) return;
   switch(a){
+    case "editInline": S.ui.inlineProfile=pid+":"+el.dataset.field; render(); return;
+    case "cancelInline": S.ui.inlineProfile=null; render(); return;
+    case "saveInline": {
+      const k=el.dataset.field; if(!p||!PROFILE_FIELDS.some(f=>f[0]===k)) return;
+      const saved=await safe(()=>store.updatePerson(pid,{profile:{[k]:draft("ip_"+pid+"_"+k,(p.profile||{})[k]||"").trim()}}),"保存しました");
+      if(saved){ S.ui.inlineProfile=null; delete S.d["ip_"+pid+"_"+k]; } render(); return;
+    }
+    case "logType": S.d["lt_"+pid]=el.dataset.type; render(); return;
+    case "actionDate": S.d["nd_"+pid]=actionDate(Number(el.dataset.days)); render(); return;
+
     case "toggleTodos": S.ui.allTodos=!S.ui.allTodos; render(); return;
     case "openRecord":
       S.ui.recordTarget=pid;
@@ -1278,7 +1321,7 @@ async function onAct(e, el, a, pid){
       const id=S.d.n_id || (S.d.n_id=uid()); const now=new Date().toISOString();
       el.textContent="追加中…";
       const data={name,kana:draft("n_kana").trim(),entry:draft("n_entry"),temp:draft("n_temp"),consent:!!draft("n_consent",false),memo:draft("n_memo").trim(),
-        profile:{age:draft("n_age").trim(),relation:draft("n_relation").trim(),sns:draft("n_sns").trim(),referrer:draft("n_referrer").trim()},biz:{},needs:[],frustrations:[],talkPoints:[],avoid:[],actions:[],createdAt:now,updatedAt:now};
+        profile:{job:draft("n_job").trim(),area:draft("n_area").trim(),age:draft("n_age").trim(),relation:draft("n_relation").trim(),sns:draft("n_sns").trim(),referrer:draft("n_referrer").trim()},biz:{},needs:[],frustrations:[],talkPoints:[],avoid:[],actions:[],createdAt:now,updatedAt:now};
       const ok=await safe(async()=>{ await store.setPerson(id,data); if(!S.logs.some(l=>l.personId===id && l.type==="new")) await store.addLog({personId:id,type:"new",text:"リストに追加"}); },"追加しました");
       if(!ok){ el.textContent="追加して開く"; return; }
       for(const k of Object.keys(S.d)) if(k.startsWith("n_")) delete S.d[k];
@@ -1290,7 +1333,7 @@ async function onAct(e, el, a, pid){
       const pr={}; for(const [k] of PROFILE_FIELDS) pr[k]=draft("e_"+k,(p.profile||{})[k]||"").trim();
       const patch={name:draft("e_name",p.name).trim()||p.name,kana:draft("e_kana",p.kana||"").trim(),profile:pr,entry:draft("e_entry",p.entry||""),temp:draft("e_temp",p.temp||""),consent:!!draft("e_consent",!!p.consent),memo:draft("e_memo",p.memo||"").trim(),
         needs:lines(draft("e_needs",(p.needs||[]).join("\n"))),frustrations:lines(draft("e_frus",(p.frustrations||[]).join("\n"))),talkPoints:lines(draft("e_talk",(p.talkPoints||[]).join("\n"))),avoid:lines(draft("e_avoid",(p.avoid||[]).join("\n")))};
-      S.ui.editProfile=null; await safe(()=>store.updatePerson(pid,patch),"保存しました"); render(); return;
+      const saved=await safe(()=>store.updatePerson(pid,patch),"保存しました"); if(saved) S.ui.editProfile=null; render(); return;
     }
     case "addAction": {
       const text=draft("na_"+pid).trim(); if(!text){ toast("アクションを書いてください"); return; }
