@@ -354,32 +354,25 @@ function ageBand(a){ const n=parseInt(String(a||"").replace(/[^\d]/g,""),10); if
 
 /* ============ ストア ============ */
 /* サーバー（Google Apps Script）呼び出し */
-/* Apps Script のURL（外部ページから開いたときはここにAPIを送る） */
-const SL2 = "/" + "/"; /* Apps Script 用に実行時に組み立てる */
+// Apps Script のURL（外部ページから開いたときはここにAPIを送る）
+const SL2 = "/" + "/"; // Apps Script が「2つ続くスラッシュ」以降を消すため、実行時に組み立てる
 const API_URL = "https:" + SL2 + "script.google.com/macros/s/AKfycbxDasyRK0oZbiRBVTc6iGwHykV8mcPqG17GNoHm38xXuvk7muhj9cHxdZS6cvSr6uDv/exec";
 const BOOT = (()=>{
   try{ return JSON.parse(document.getElementById("boot").textContent); }
   catch(_){ const q=new URLSearchParams(location.search); return {key:q.get("k")||"", url:location.origin+location.pathname, external:true}; }
 })();
-let authToken = "";
-try{ authToken = localStorage.getItem("oc_token") || ""; }catch(_){}
-function saveToken(token){ authToken=token||""; try{ if(authToken) localStorage.setItem("oc_token",authToken); else localStorage.removeItem("oc_token"); }catch(_){} }
-function showLogin(message=""){
-  saveToken(""); S.mode="login"; S.me=null; S.canWrite=false; S.people=new Map(); S.logs=[]; S.handoffs=[]; S.members=[]; S.team=null; S.teamRequest=(S.teamRequest||0)+1; S.d={}; S.ai={}; S.ui={filters:{q:"",biz:"",temp:"",phase:""}}; S.loginMessage=message; render();
-}
 function call(action, payload){
   return new Promise((resolve, reject)=>{
-    const receive = o => { if(o.ok) resolve(o.data); else { if(o.error==="invalid_key") showLogin(); reject({code:o.error}); } };
     if(!(window.google && google.script && google.script.run)){
-      fetch(API_URL,{method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({key:authToken, action, payload:payload||{}})})
-        .then(r=>r.json()).then(receive)
+      fetch(API_URL,{method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({key:BOOT.key||"", action, payload:payload||{}})})
+        .then(r=>r.json()).then(o=> o.ok ? resolve(o.data) : reject({code:o.error}))
         .catch(e=>reject({code:"network", message:String(e&&e.message||e)}));
       return;
     }
     google.script.run
-      .withSuccessHandler(r=>{ let o; try{ o=JSON.parse(r); }catch(_){ reject({code:"bad_response"}); return; } receive(o); })
+      .withSuccessHandler(r=>{ let o; try{ o=JSON.parse(r); }catch(_){ reject({code:"bad_response"}); return; } o.ok ? resolve(o.data) : reject({code:o.error}); })
       .withFailureHandler(e=>reject({code:"network", message:String(e&&e.message||e)}))
-      .api(authToken, action, JSON.stringify(payload||{}));
+      .api(BOOT.key||"", action, JSON.stringify(payload||{}));
   });
 }
 const GLOBAL_KEYS = ["businesses","kinds","lineTemplate"];
@@ -521,7 +514,7 @@ function render(){
     $("#nav").innerHTML=""; $("#bnav").innerHTML=""; $("#banner").innerHTML="";
     document.querySelectorAll(".logo").forEach(el=>el.innerHTML = fullRing(30));
     main.innerHTML = S.mode==="loading" ? `<div class="empty" role="status" aria-live="polite">ノートを読み込んでいます…<p class="hint">通信状況によって少し時間がかかります。</p></div>`
-      : S.mode==="login" ? `<form id="loginForm" class="card stack" style="max-width:420px;margin:24px auto"><h1>ログイン</h1><label class="f">ログインID<input name="loginId" autocomplete="username" autocapitalize="none" required></label><label class="f">パスワード<input name="password" type="password" autocomplete="current-password" required></label><p role="alert" class="hint">${esc(S.loginMessage||"")}</p><button class="btn pri" type="submit">ログイン</button><p class="hint">パスワードを忘れたら管理者に再発行を頼んでください</p></form>`
+      : S.mode==="nokey" ? `<div class="empty"><b>このリンクでは開けません</b><p>個人用のURL（末尾に ?k= が付いたもの）で開いてください。分からないときは管理者に聞いてください。</p></div>`
       : S.mode==="offline" ? `<div class="empty">このページは Google Apps Script のウェブアプリとして開いたときに動きます。</div>`
       : `<div class="empty">読み込めませんでした。<br><button class="btn" data-act="reload" style="margin-top:10px">もう一度読み込む</button></div>`;
     return;
@@ -547,9 +540,9 @@ function render(){
   $("#banner").innerHTML = ban;
   if(r.name==="team" && !isLeader()){ main.innerHTML=`<div class="empty">リーダーだけが見られるページです。</div>`; return; }
   if(r.name==="members" && !isAdmin()){ main.innerHTML=`<div class="empty">管理者だけが見られるページです。</div>`; return; }
-  main.innerHTML = r.name==="home"?passwordInvite()+vHome() : r.name==="list"?vList() : r.name==="person"?vPerson(r.id) : r.name==="new"?vNew() : r.name==="share"?vShare() : r.name==="team"?vTeam() : r.name==="members"?vMembers() : vGoals();
+  main.innerHTML = r.name==="home"?vHome() : r.name==="list"?vList() : r.name==="person"?vPerson(r.id) : r.name==="new"?vNew() : r.name==="share"?vShare() : r.name==="team"?vTeam() : r.name==="members"?vMembers() : vGoals();
 }
-window.addEventListener("hashchange",()=>{ delete S.ui.tempPassword; delete S.ui.tempId; S.ui.editProfile=null; S.ui.confirm=null; S.ui.newMember=null; if(route().name==="team") S.team=null; render(); window.scrollTo(0,0); if(S.ui.recordTarget && route().id===S.ui.recordTarget){ S.ui.recordTarget=null; $("#person-record")?.scrollIntoView({block:"start"}); $("#lg_text")?.focus(); } });
+window.addEventListener("hashchange",()=>{ S.ui.editProfile=null; S.ui.confirm=null; S.ui.newMember=null; if(route().name==="team") S.team=null; render(); window.scrollTo(0,0); if(S.ui.recordTarget && route().id===S.ui.recordTarget){ S.ui.recordTarget=null; $("#person-record")?.scrollIntoView({block:"start"}); $("#lg_text")?.focus(); } });
 
 /* ============ ダッシュボード ============ */
 function kpiTiles(mk){
@@ -1192,13 +1185,6 @@ function vTeam(){
   </div>`;
 }
 
-function passwordFields(invite=false){
-  return `<label class="f">ログインID<input readonly value="${esc(S.me.loginId||"")}"></label>${!invite&&S.me.hasPassword?`<label class="f">現在のパスワード<input id="pw_current" type="password" autocomplete="current-password"></label>`:""}<label class="f">新しいパスワード（8文字以上）<input id="pw_next" type="password" minlength="8" autocomplete="new-password"></label><button class="btn pri" data-act="setPassword">保存</button>`;
-}
-function passwordInvite(){
-  return !S.viewingOther&&!S.me.hasPassword&&!S.ui.dismissPassword ? `<section class="card stack" style="margin-bottom:16px"><div class="between"><b>パスワードを決めると、ほかの端末からもログインできます</b><button class="btn sm" data-act="dismissPassword">あとで</button></div>${passwordFields(true)}</section>` : "";
-}
-function accountSettings(){ return `<section class="card stack"><h2>ログイン設定・パスワード変更</h2>${passwordFields()}<button class="btn" data-act="logout">ログアウト</button></section>`; }
 /* ============ メンバー管理（管理者） ============ */
 const memberUrl = m => m ? `${BOOT.url||""}?k=${m.key}` : "";
 function vMembers(){
@@ -1212,9 +1198,6 @@ function vMembers(){
           ${self?"":c==="stop:"+m.id?`<button class="btn sm warnb" data-act="memberOp" data-op="stop" data-mid="${m.id}">停止する</button>`:m.active?`<button class="btn sm" data-act="askMember" data-op="stop" data-mid="${m.id}">停止</button>`:`<button class="btn sm" data-act="memberOp" data-op="start" data-mid="${m.id}">再開</button>`}
           ${c==="rekey:"+m.id?`<button class="btn sm warnb" data-act="memberOp" data-op="rekey" data-mid="${m.id}">URLを作り直す（古いURLは無効）</button>`:`<button class="btn sm ghost" data-act="askMember" data-op="rekey" data-mid="${m.id}">URLを作り直す</button>`}
         </div></div>
-      <p class="hint">ログインID：<b>${esc(m.loginId||"")}</b></p>
-      <div class="row">${c==="reset:"+m.id?`<button class="btn sm warnb" data-act="resetPassword" data-mid="${m.id}">再発行する（全端末でログアウト）</button><button class="btn sm" data-act="cancelConfirm">キャンセル</button>`:`<button class="btn sm" data-act="askMember" data-op="reset" data-mid="${m.id}">パスワード再発行</button>`}</div>
-      ${S.ui.tempId===m.id?`<div class="row" role="status">仮パスワード（この表示を閉じると再表示できません）：<b>${esc(S.ui.tempPassword)}</b><button class="btn sm" data-act="copyTemp">コピー</button><button class="btn sm" data-act="closeTemp">閉じる</button></div>`:""}
       <div class="row" style="margin-top:6px"><input id="mu_${m.id}" type="text" readonly value="${esc(memberUrl(m))}" style="flex:1;min-width:0;font-size:12px" aria-label="${esc(m.name)}の個人用URL"><button class="btn sm" data-act="copyUrl" data-mid="${m.id}">コピー</button></div>
     </div>`;
   }).join("");
@@ -1224,7 +1207,6 @@ function vMembers(){
       <h2>メンバーを追加</h2>
       <div class="row" style="align-items:flex-end">
         <label class="f" style="flex:2;min-width:160px">名前<input id="m_name" type="text" data-d="m_name" value="${esc(draft("m_name"))}"></label>
-        <label class="f" style="flex:1;min-width:140px">ログインID（任意）<input data-d="m_loginId" value="${esc(draft("m_loginId"))}" autocapitalize="none" placeholder="自動で作成"></label>
         <label class="f" style="flex:1;min-width:120px">権限<select id="m_role" data-d="m_role">${Object.entries(ROLE_LABEL).map(([k,v])=>`<option value="${k}" ${draft("m_role","member")===k?"selected":""}>${v}</option>`).join("")}</select></label>
         <button class="btn pri" data-act="addMember">追加</button>
       </div>
@@ -1272,7 +1254,6 @@ function vGoals(){
       <p class="hint">数字は記録から自動で数えます。事業のステータスを変える・面談を解析する・LINE共有で「送った」を押す・連絡を記録する、で増えます。</p>
     </section>
     <section class="card"><div class="sec-title"><h2>直近30日の行動量</h2><span class="muted">1日あたりの記録件数</span></div>${svg}</section>
-    ${W?accountSettings():""}
     ${W&&isAdmin()?settingsPanel():""}
   </div>`;
 }
@@ -1340,7 +1321,7 @@ document.addEventListener("click", e=>{
 });
 /* 保存系のボタンは、処理中にもう一度押されても無視する（二重登録の防止） */
 const INFLIGHT = new Set();
-const GUARDED = ["setPassword","resetPassword","logout","saveInline","createPerson","saveProfile","addAction","doneAction","dropAction","addLog","delLog","delPerson","applyAI","loadJson","saveHo","sentHo","delHo","saveTpl","resetTpl","saveGoals","saveBiz","addBiz","addMember","memberOp"];
+const GUARDED = ["saveInline","createPerson","saveProfile","addAction","doneAction","dropAction","addLog","delLog","delPerson","applyAI","loadJson","saveHo","sentHo","delHo","saveTpl","resetTpl","saveGoals","saveBiz","addBiz","addMember","memberOp"];
 document.addEventListener("click", async e=>{
   const el=e.target.closest("[data-act]"); if(!el || el.tagName==="SELECT" || (el.tagName==="INPUT"&&el.type==="checkbox")) return;
   const a=el.dataset.act, pid=el.dataset.pid;
@@ -1358,20 +1339,6 @@ async function onAct(e, el, a, pid){
   const p = pid && S.people.get(pid);
   if(!S.canWrite && ["editInline","saveInline","editProfile","saveProfile","actionDate","logType"].includes(a)) return;
   switch(a){
-    case "dismissPassword": S.ui.dismissPassword=true; render(); return;
-    case "setPassword": {
-      const next=$("#pw_next").value, current=$("#pw_current")?.value||"";
-      if(next.length<8){ toast("パスワードは8文字以上にしてください"); return; }
-      try{ await call("setPassword",{current,next}); S.me.hasPassword=true; render(); toast("パスワードを保存しました"); }
-      catch(e){ if(e.code!=="invalid_key") toast(e.code==="wrong_password"?"現在のパスワードが違います":"保存できませんでした"); } return;
-    }
-    case "logout": try{ await call("logout"); }catch(_){} showLogin(); return;
-    case "resetPassword": {
-      try{ const d=await call("resetPassword",{id:el.dataset.mid}); S.ui.confirm=null; S.ui.tempId=el.dataset.mid; S.ui.tempPassword=d.temp; render(); }
-      catch(e){ if(e.code!=="invalid_key") toast("再発行できませんでした"); } return;
-    }
-    case "copyTemp": await copyText(S.ui.tempPassword||""); return;
-    case "closeTemp": delete S.ui.tempPassword; delete S.ui.tempId; render(); return;
     case "editInline": S.ui.inlineProfile=pid+":"+el.dataset.field; render(); return;
     case "cancelInline": S.ui.inlineProfile=null; render(); return;
     case "saveInline": {
@@ -1400,7 +1367,7 @@ async function onAct(e, el, a, pid){
     case "filterTo": S.ui.filters={q:"",temp:"",biz:el.dataset.biz,phase:el.dataset.phase}; break;
     case "createPerson": {
       const name=draft("n_name").trim(); if(!name){ toast("名前を入れてください"); return; }
-      /* 同じ入力内容での再送は同じIDを使う（通信が遅くて押し直しても1人分にしかならない） */
+      // 同じ入力内容での再送は同じIDを使う（通信が遅くて押し直しても1人分にしかならない）
       const id=S.d.n_id || (S.d.n_id=uid()); const now=new Date().toISOString();
       el.textContent="追加中…";
       const data={name,kana:draft("n_kana").trim(),entry:draft("n_entry"),temp:draft("n_temp"),consent:!!draft("n_consent",false),memo:draft("n_memo").trim(),
@@ -1450,8 +1417,8 @@ async function onAct(e, el, a, pid){
     case "viewMember": await loadData(el.dataset.mid); location.hash="#home"; return;
     case "addMember": {
       const name=draft("m_name").trim(); if(!name){ toast("名前を入れてください"); return; }
-      try{ const m=await call("addMember",{name, role:draft("m_role","member"), loginId:draft("m_loginId").trim()}); S.members.push(m); delete S.d.m_name; delete S.d.m_loginId; S.ui.newMember=m.id; render(); toast("追加しました。URLを本人に送ってください"); }
-      catch(e){ toast(e.code==="duplicate_login_id"?"このログインIDは使われています":e.code==="invalid_login_id"?"ログインIDは半角英数字・._@-の3〜40文字にしてください":"追加できませんでした"); }
+      try{ const m=await call("addMember",{name, role:draft("m_role","member")}); S.members.push(m); delete S.d.m_name; S.ui.newMember=m.id; render(); toast("追加しました。URLを本人に送ってください"); }
+      catch(e){ toast("追加できませんでした"); }
       return;
     }
     case "copyUrl": copyText(memberUrl(S.members.find(m=>m.id===el.dataset.mid))); return;
@@ -1550,7 +1517,7 @@ async function loadData(view){
     S.mode = "ready";
   }catch(e){
     console.error(e);
-    S.mode = e && (e.code==="invalid_key") ? "login" : e && e.code==="offline" ? "offline" : "error";
+    S.mode = e && (e.code==="invalid_key") ? "nokey" : e && e.code==="offline" ? "offline" : "error";
   }
   render();
 }
@@ -1561,21 +1528,5 @@ async function loadTeam(){
   catch(e){ if(request!==S.teamRequest) return; S.team="error"; }
   render();
 }
-document.addEventListener("submit", async e=>{
-  if(e.target.id!=="loginForm") return;
-  e.preventDefault(); const form=e.target, button=form.querySelector("button"); if(button.disabled) return; button.disabled=true;
-  try{ const d=await call("login",{loginId:form.elements.loginId.value,password:form.elements.password.value}); saveToken(d.token); await loadData(); }
-  catch(err){ S.loginMessage=err.code==="login_locked"?"しばらくしてからもう一度お試しください":err.code==="login_failed"?"IDかパスワードが違います":"通信できませんでした。もう一度お試しください"; S.mode="login"; render(); }
-});
-async function start(){
-  if(BOOT.key){
-    try{
-      const d=await call("loginByKey",{key:BOOT.key}); saveToken(d.token); BOOT.key="";
-      try{ const url=new URL(location.href); url.searchParams.delete("k"); history.replaceState(null,"",url.pathname+url.search+url.hash); }catch(_){}
-      if(window.google&&google.script&&google.script.history){ try{ google.script.history.replace({}, {}, location.hash.slice(1)); }catch(_){} }
-    }catch(e){ if(e.code==="invalid_key") showLogin("この招待URLは使えません。ログインするか管理者に聞いてください"); else { S.mode="error"; render(); } return; }
-  }
-  if(authToken) await loadData(); else showLogin();
-}
-start();
+loadData();
 </script>
