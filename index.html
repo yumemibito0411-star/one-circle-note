@@ -266,39 +266,42 @@ const DEFAULT_BIZ = [
    statuses:[["未提案","none"],["提案済","proposed"],["体験予定","connected"],["初参加","won"],["継続参加","won"],["見送り","lost"]]},
 ];
 const DEFAULT_KINDS = [["転職面談","jinzai"],["代理店説明","jinzai"],["イベント面談","event"],["キャンプ説明","event"],["住まい相談","estate"],["スクール説明","school"],["美容カウンセリング","beauty"],["サークル体験","circle"],["PG",""]];
-const DEFAULT_TEMPLATE = `【NA氏名🔵】
+const DEFAULT_TEMPLATE = `【氏名】
 {氏名}
 
-【研修項目🔵】
+【依頼項目】
 {面談の種類}
 
-【日付🔵】
+【日付】
 {日付}
 
-【伝えてほしいポイント🔵】
+【伝えてほしい内容】
 {伝えてほしいポイント}
 
-【マネージャー氏名🔵】
+【ニーズ】
+{ニーズ}
+
+【マネージャー氏名】
 {担当者}
 
-【話された内容🔵】
+【話された内容】
 {話された内容}
 
-【NAからの質問事項🔵】
+【質問事項】
 {質問事項}
 
-【マネージャーからのフィードバック🔵】
+【マネージャーからのフィードバック】
 {フィードバック}
 
-【年齢🔵】
+【年齢】
 {年齢}
 
-【関係値🟢】
+【関係値】
 {関係値}
 
 【メモ】
 {メモ}`;
-const PLACEHOLDERS = ["氏名","面談の種類","日付","伝えてほしいポイント","担当者","話された内容","質問事項","フィードバック","年齢","関係値","メモ","事業"];
+const PLACEHOLDERS = ["氏名","面談の種類","日付","伝えてほしいポイント","ニーズ","担当者","話された内容","質問事項","フィードバック","年齢","関係値","メモ","事業"];
 const METRICS = [
   {key:"contact", label:"接触", desc:"連絡・会話"},
   {key:"meeting", label:"面談", desc:"じっくり聞いた"},
@@ -344,7 +347,10 @@ const uniq = a => [...new Set(a.filter(Boolean))];
 const biz = () => (Array.isArray(S.config.businesses) && S.config.businesses.length ? S.config.businesses : DEFAULT_BIZ);
 const bizBy = k => biz().find(b=>b.key===k);
 const kinds = () => (Array.isArray(S.config.kinds) && S.config.kinds.length ? S.config.kinds : DEFAULT_KINDS);
-const template = () => S.config.lineTemplate || DEFAULT_TEMPLATE;
+const template = () => {
+  const saved = S.config.lineTemplate;
+  return saved && !saved.includes("【NA氏名🔵】") ? saved : DEFAULT_TEMPLATE;
+};
 const phaseOf = (bk, status) => { const b = bizBy(bk); const s = b && b.statuses.find(x=>x[0]===status); return s ? s[1] : "none"; };
 const goalsFor = mk => (S.config.goals && S.config.goals[mk]) || {};
 const meName = () => S.config.me || "";
@@ -354,8 +360,8 @@ function ageBand(a){ const n=parseInt(String(a||"").replace(/[^\d]/g,""),10); if
 
 /* ============ ストア ============ */
 /* サーバー（Google Apps Script）呼び出し */
-// Apps Script のURL（外部ページから開いたときはここにAPIを送る）
-const SL2 = "/" + "/"; // Apps Script が「2つ続くスラッシュ」以降を消すため、実行時に組み立てる
+/* Apps Script のURL（外部ページから開いたときはここにAPIを送る） */
+const SL2 = "/" + "/"; /* Apps Script が「2つ続くスラッシュ」以降を消すため、実行時に組み立てる */
 const API_URL = "https:" + SL2 + "script.google.com/macros/s/AKfycbxDasyRK0oZbiRBVTc6iGwHykV8mcPqG17GNoHm38xXuvk7muhj9cHxdZS6cvSr6uDv/exec";
 const BOOT = (()=>{
   try{ return JSON.parse(document.getElementById("boot").textContent); }
@@ -449,7 +455,7 @@ function followUps(){
   return out.sort((a,b)=>b.days-a.days);
 }
 function hoStatus(h){
-  if(h.talked && h.talked.trim()) return {k:"done", t:"戻し済み", c:"ok"};
+  if(h.feedback && h.feedback.trim()) return {k:"done", t:"戻し済み", c:"ok"};
   if(h.status!=="sent") return {k:"draft", t:"下書き", c:"info"};
   if(h.datetime && h.datetime.slice(0,10) < today()) return {k:"back", t:"結果を戻す", c:"bad"};
   return {k:"sent", t:"送信済み・面談待ち", c:"warn"};
@@ -912,13 +918,30 @@ async function changeStatus(id, bk, status, date){
 }
 
 /* ============ LINE共有（つなぎ依頼） ============ */
-const HO_KEYS = ["ho_person","ho_kind","ho_biz","ho_dt","ho_mgr","ho_points","ho_talked","ho_q","ho_fb","ho_age","ho_rel","ho_memo"];
+const HO_KEYS = ["ho_person","ho_kind","ho_biz","ho_dt","ho_mgr","ho_points","ho_needs","ho_talked","ho_q","ho_fb","ho_age","ho_rel","ho_memo"];
 function hoDefaultsFor(p){
   const pr=p.profile||{};
+  const bullets = items => (items||[]).filter(x=>x.trim()).slice(0,4).map(x=>"・"+x.trim()).join("\n");
+  const logs = S.logs
+    .filter(l=>l.personId===p.id && ["meeting","report","contact","note"].includes(l.type) && (l.text||"").trim())
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (b.createdAt||"").localeCompare(a.createdAt||""))
+    .slice(0,4)
+    .reverse();
+  const talked = logs.map(l=>{
+    const text = l.text.trim().replace(/\s+/g," ");
+    return `・${md(l.date)} ${LOG_TYPES[l.type]}：${text.length>80 ? text.slice(0,80)+"…" : text}`;
+  }).join("\n");
   return {
     ho_age: ageBand(pr.age),
     ho_rel: [pr.relation, pr.sns].filter(Boolean).join("\n"),
-    ho_memo: [p.memo, pr.job, pr.personality, pr.hobbies?`趣味：${pr.hobbies}`:"", p.summary].filter(Boolean).join("\n"),
+    ho_needs: bullets(p.needs),
+    ho_talked: talked || (p.summary||"").slice(0,120),
+    ho_q: bullets(p.frustrations),
+    ho_memo: [
+      ...[["職業",pr.job],["住まい",pr.area],["人柄",pr.personality]]
+        .filter(([,value])=>(value||"").trim()).map(([label,value])=>`${label}：${value.trim().replace(/\s+/g," ")}`),
+      ...(p.avoid||[]).filter(x=>x.trim()).map(x=>`・注意：${x.trim().replace(/\s+/g," ")}`),
+    ].join("\n"),
     ho_points: (p.talkPoints||[]).map(x=>"・"+x).join("\n"),
   };
 }
@@ -926,7 +949,7 @@ function hoLoad(h, personId){
   for(const k of HO_KEYS) delete S.d[k];
   S.ui.hoId = h ? h.id : null; S.ui.hoOpen = true; S.ui.confirm = null;
   if(h){
-    Object.assign(S.d,{ho_person:h.personId,ho_kind:h.kind||"",ho_biz:h.biz||"",ho_dt:h.datetime||"",ho_mgr:h.manager||"",ho_points:h.points||"",ho_talked:h.talked||"",ho_q:h.questions||"",ho_fb:h.feedback||"",ho_age:h.age||"",ho_rel:h.relation||"",ho_memo:h.memo||""});
+    Object.assign(S.d,{ho_person:h.personId,ho_kind:h.kind||"",ho_biz:h.biz||"",ho_dt:h.datetime||"",ho_mgr:h.manager||"",ho_points:h.points||"",ho_needs:h.needs||"",ho_talked:h.talked||"",ho_q:h.questions||"",ho_fb:h.feedback||"",ho_age:h.age||"",ho_rel:h.relation||"",ho_memo:h.memo||""});
   } else if(personId && S.people.has(personId)){
     const p=S.people.get(personId);
     const bk = (biz().find(b=>{const st=(p.biz||{})[b.key];const ph=st&&phaseOf(b.key,st.status);return ph==="proposed"||ph==="connected";})||{}).key||"";
@@ -939,13 +962,13 @@ function hoFill(){
   const b = bizBy(draft("ho_biz"));
   const v = x => (String(x||"").trim() || "ー");
   const map = {"氏名":p?p.name:"", "面談の種類":draft("ho_kind"), "日付":mdt(draft("ho_dt")), "伝えてほしいポイント":draft("ho_points"), "担当者":draft("ho_mgr"),
-    "話された内容":draft("ho_talked"), "質問事項":draft("ho_q"), "フィードバック":draft("ho_fb"), "年齢":draft("ho_age"), "関係値":draft("ho_rel"), "メモ":draft("ho_memo"), "事業":b?b.name:""};
+    "ニーズ":draft("ho_needs"), "話された内容":draft("ho_talked"), "質問事項":draft("ho_q"), "フィードバック":draft("ho_fb"), "年齢":draft("ho_age"), "関係値":draft("ho_rel"), "メモ":draft("ho_memo"), "事業":b?b.name:""};
   return template().replace(/\{([^}]+)\}/g,(m,k)=> k in map ? v(map[k]) : m);
 }
 function hoData(){
   const prev = S.handoffs.find(h=>h.id===S.ui.hoId)||{};
   return {personId:draft("ho_person"), kind:draft("ho_kind").trim(), biz:draft("ho_biz"), datetime:draft("ho_dt"), manager:draft("ho_mgr").trim(), points:draft("ho_points"),
-    talked:draft("ho_talked"), questions:draft("ho_q"), feedback:draft("ho_fb"), age:draft("ho_age"), relation:draft("ho_rel"), memo:draft("ho_memo"),
+    needs:draft("ho_needs"), talked:draft("ho_talked"), questions:draft("ho_q"), feedback:draft("ho_fb"), age:draft("ho_age"), relation:draft("ho_rel"), memo:draft("ho_memo"),
     status:prev.status||"draft", createdAt:prev.createdAt||new Date().toISOString()};
 }
 function pointsPrompt(p, kind, bk, mgr){
@@ -985,7 +1008,7 @@ function vShare(){
   return `${head("リーダー共有","次につなぐ面談の依頼をLINEで送る文面と、月のまとめを作ります", W?`<button class="btn pri" data-act="newHo">${icon("plus")}新しくつくる</button>`:"")}
   <div class="stack">
     ${S.ui.hoOpen ? hoEditor() : ""}
-    <section class="card"><div class="sec-title"><h2>つなぎ依頼の一覧</h2><span class="muted">面談日を過ぎたら「話された内容」を記入して戻す</span></div>${hoList}</section>
+    <section class="card"><div class="sec-title"><h2>つなぎ依頼の一覧</h2><span class="muted">面談日を過ぎたら「マネージャーからのフィードバック」を記入して戻す</span></div>${hoList}</section>
     ${monthlySummary()}
     ${W&&isAdmin()?templatePanel():""}
   </div>`;
@@ -1003,7 +1026,7 @@ function hoEditor(){
       <div class="stack" style="gap:12px">
         <div class="fields">
           <label class="f">つなぐ人<select id="ho_person" data-d="ho_person" data-ho="person"><option value="">選んでください</option>${people.map(x=>`<option value="${x.id}" ${pid===x.id?"selected":""}>${esc(x.name)}${x.sample?"（サンプル）":""}</option>`).join("")}</select></label>
-          <label class="f">面談の種類（研修項目）<input id="ho_kind" type="text" list="kindlist" data-d="ho_kind" data-ho="kind" value="${esc(draft("ho_kind"))}" placeholder="例：転職面談"></label>
+          <label class="f">依頼項目<input id="ho_kind" type="text" list="kindlist" data-d="ho_kind" data-ho="kind" value="${esc(draft("ho_kind"))}" placeholder="例：転職面談"></label>
           <label class="f">事業<select id="ho_biz" data-d="ho_biz" data-ho="1"><option value="">指定なし</option>${biz().map(b=>`<option value="${b.key}" ${draft("ho_biz")===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
           <label class="f">日時<input id="ho_dt" type="datetime-local" data-d="ho_dt" data-ho="1" value="${esc(draft("ho_dt"))}"></label>
           <label class="f">マネージャー（担当者）<input id="ho_mgr" type="text" list="mgrlist" data-d="ho_mgr" data-ho="1" value="${esc(draft("ho_mgr"))}"></label>
@@ -1012,19 +1035,20 @@ function hoEditor(){
         <datalist id="kindlist">${kinds().map(k=>`<option value="${esc(k[0])}">`).join("")}</datalist>
         <datalist id="mgrlist">${mgrs.map(m=>`<option value="${esc(m)}">`).join("")}</datalist>
         <div class="stack" style="gap:6px">
-          <div class="between"><span class="small muted" style="font-weight:600">伝えてほしいポイント</span>${S.sample&&W?`<button class="btn sm" data-act="aiPoints" ${busy||!p?"disabled":""}>${icon("spark")}${busy?"作成中…":"この面談向けにAIで作る"}</button>`:""}</div>
-          <textarea id="ho_points" rows="7" data-d="ho_points" data-ho="1" aria-label="伝えてほしいポイント" placeholder="・〇〇の可能性とわくわく&#10;→補足&#10;・次回の日程取り">${esc(draft("ho_points"))}</textarea>
+          <div class="between"><span class="small muted" style="font-weight:600">伝えてほしい内容</span>${S.sample&&W?`<button class="btn sm" data-act="aiPoints" ${busy||!p?"disabled":""}>${icon("spark")}${busy?"作成中…":"この面談向けにAIで作る"}</button>`:""}</div>
+          <textarea id="ho_points" rows="7" data-d="ho_points" data-ho="1" aria-label="伝えてほしい内容" placeholder="・〇〇の可能性とわくわく&#10;→補足&#10;・次回の日程取り">${esc(draft("ho_points"))}</textarea>
           ${msg?`<p class="hint" style="color:var(--bad);margin:0">${esc(msg)}</p>`:""}
           ${!S.sample&&W&&p?`<p class="hint" style="margin:0">AIに頼むときは <button class="btn sm" data-act="copyPointsPrompt">AI用にコピー</button> して、返ってきた箇条書きを貼ってください。</p>`:""}
         </div>
+        <label class="f">ニーズ<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">本人が求めていること</span><textarea id="ho_needs" rows="3" data-d="ho_needs" data-ho="1">${esc(draft("ho_needs"))}</textarea></label>
+        <label class="f">話された内容<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">これまでの面談内容と日付、相手側の反応を簡潔に（つなぐ前に書く）</span><textarea id="ho_talked" rows="3" data-d="ho_talked" data-ho="1">${esc(draft("ho_talked"))}</textarea></label>
+        <label class="f">質問事項<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">相手側が気にしていることを簡潔に（つなぐ前に書く）</span><textarea id="ho_q" rows="2" data-d="ho_q" data-ho="1">${esc(draft("ho_q"))}</textarea></label>
         <div class="fields">
           <label class="f">関係値<textarea id="ho_rel" rows="2" data-d="ho_rel" data-ho="1" placeholder="例：SNS&#10;https:${SL2}www.instagram.com/...">${esc(draft("ho_rel"))}</textarea></label>
-          <label class="f">メモ<textarea id="ho_memo" rows="2" data-d="ho_memo" data-ho="1">${esc(draft("ho_memo"))}</textarea></label>
+          <label class="f">メモ<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">マネージャーが知っておいた方が良いことだけ（短く）</span><textarea id="ho_memo" rows="2" data-d="ho_memo" data-ho="1">${esc(draft("ho_memo"))}</textarea></label>
         </div>
-        <details ${draft("ho_talked")||draft("ho_q")||draft("ho_fb")||(cur&&hoStatus(cur).k==="back")?"open":""}><summary><b>面談のあとに記入（戻す）</b> <span class="muted small">話された内容・質問・フィードバック</span></summary>
+        <details ${draft("ho_fb")||(cur&&hoStatus(cur).k==="back")?"open":""}><summary><b>面談のあとに記入（戻す）</b></summary>
           <div class="stack" style="gap:10px;margin-top:10px">
-            <label class="f">話された内容<textarea id="ho_talked" rows="3" data-d="ho_talked" data-ho="1">${esc(draft("ho_talked"))}</textarea></label>
-            <label class="f">NAからの質問事項<textarea id="ho_q" rows="2" data-d="ho_q" data-ho="1">${esc(draft("ho_q"))}</textarea></label>
             <label class="f">マネージャーからのフィードバック<textarea id="ho_fb" rows="2" data-d="ho_fb" data-ho="1">${esc(draft("ho_fb"))}</textarea></label>
           </div></details>
       </div>
@@ -1036,7 +1060,7 @@ function hoEditor(){
           <a class="btn line" id="ho_line" href="https:${SL2}line.me/R/share?text=${esc(encodeURIComponent(txt))}" target="_blank" rel="noopener">LINEで送る</a>
           ${W?`<button class="btn" data-act="saveHo" ${p?"":"disabled"}>保存</button><button class="btn" data-act="sentHo" ${p?"":"disabled"}>送った</button>`:""}
         </div>
-        ${W?`<p class="hint" style="margin:0">「送った」を押すと保存され、行動量の「つなぎ」に1件入り、事業のステータスが「つないだ」段階に進みます。面談後に「話された内容」を記入して保存すると「戻し済み」になります。</p>`:""}
+        ${W?`<p class="hint" style="margin:0">「送った」を押すと保存され、行動量の「つなぎ」に1件入り、事業のステータスが「つないだ」段階に進みます。面談後に「マネージャーからのフィードバック」を記入して保存すると「戻し済み」になります。</p>`:""}
         ${cur&&W?`<div class="row" style="justify-content:flex-end">${S.ui.confirm==="ho:"+cur.id?`<button class="btn sm warnb" data-act="delHo">本当に削除</button>`:`<button class="btn sm ghost" data-act="askDelHo">この依頼を削除</button>`}</div>`:""}
       </div>
     </div>
@@ -1066,8 +1090,8 @@ async function saveHo(markSent){
       if(p && b){ const curSt=((p.biz||{})[b.key]||{});
         if(PHASE_RANK[phaseOf(b.key,curSt.status)]<2){ const target=b.statuses.find(s=>s[1]==="connected"); if(target) await store.updatePerson(p.id,{biz:{[b.key]:{status:target[0],updatedAt:new Date().toISOString(),owner:data.manager||curSt.owner||""}}}); } }
     }
-    if(data.talked.trim() && !(prev && (prev.talked||"").trim())){
-      await store.addLog({personId:data.personId,type:"report",biz:data.biz||"",date:(data.datetime||today()).slice(0,10),text:`【${data.kind||"面談"}の結果】${data.talked}${data.feedback?`\nFB：${data.feedback}`:""}`});
+    if(data.feedback.trim() && !(prev && (prev.feedback||"").trim())){
+      await store.addLog({personId:data.personId,type:"report",biz:data.biz||"",date:(data.datetime||today()).slice(0,10),text:`【${data.kind||"面談"}の結果】${data.feedback}`});
     }
   }, markSent?"送信済みにしました":"保存しました");
   render();
@@ -1367,7 +1391,7 @@ async function onAct(e, el, a, pid){
     case "filterTo": S.ui.filters={q:"",temp:"",biz:el.dataset.biz,phase:el.dataset.phase}; break;
     case "createPerson": {
       const name=draft("n_name").trim(); if(!name){ toast("名前を入れてください"); return; }
-      // 同じ入力内容での再送は同じIDを使う（通信が遅くて押し直しても1人分にしかならない）
+      /* 同じ入力内容での再送は同じIDを使う（通信が遅くて押し直しても1人分にしかならない） */
       const id=S.d.n_id || (S.d.n_id=uid()); const now=new Date().toISOString();
       el.textContent="追加中…";
       const data={name,kana:draft("n_kana").trim(),entry:draft("n_entry"),temp:draft("n_temp"),consent:!!draft("n_consent",false),memo:draft("n_memo").trim(),
