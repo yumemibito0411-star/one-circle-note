@@ -265,7 +265,15 @@ const DEFAULT_BIZ = [
   {key:"circle", name:"サークル", color:"--b-circle", entry:"居場所がほしい／人と会いたい／運動不足／何か始めたい", reward:"紹介報酬なし。6事業の最初の入口。2027年1月開始",
    statuses:[["未提案","none"],["提案済","proposed"],["体験予定","connected"],["初参加","won"],["継続参加","won"],["見送り","lost"]]},
 ];
-const DEFAULT_KINDS = [["転職面談","jinzai"],["代理店説明","jinzai"],["イベント面談","event"],["キャンプ説明","event"],["住まい相談","estate"],["スクール説明","school"],["美容カウンセリング","beauty"],["サークル体験","circle"],["PG",""]];
+const DEFAULT_KINDS = [
+  ["転職面談","jinzai","転職の希望や条件を聞き、人材事業の案件につなぐ面談"],
+  ["スクール面談","school","スクールの内容を説明し、受講につなぐ面談"],
+  ["企画運営面談","event","イベントの企画・運営に関わってもらうための面談"],
+  ["転職PA","jinzai","案件管理から案件紹介はあるが、なかなか進まない人へのパーソナルアドバイス"],
+  ["スクールPA","school","スクール面談を受けた、またはビジター受講したが、なかなかメンバーにならない人へのパーソナルアドバイス"],
+  ["目標設定","","本人の目標を一緒に設定する面談"],
+  ["その他","","上記にない依頼（伝えてほしい内容は自分で書く）"],
+];
 const DEFAULT_TEMPLATE = `【氏名】
 {氏名}
 
@@ -346,7 +354,8 @@ const lines = v => Array.isArray(v) ? v : String(v||"").split("\n").map(s=>s.tri
 const uniq = a => [...new Set(a.filter(Boolean))];
 const biz = () => (Array.isArray(S.config.businesses) && S.config.businesses.length ? S.config.businesses : DEFAULT_BIZ);
 const bizBy = k => biz().find(b=>b.key===k);
-const kinds = () => (Array.isArray(S.config.kinds) && S.config.kinds.length ? S.config.kinds : DEFAULT_KINDS);
+const kinds = () => (Array.isArray(S.config.kinds) && S.config.kinds.some(k=>k[0]==="転職PA") ? S.config.kinds : DEFAULT_KINDS);
+const kindChoicesText = () => kinds().map(([name,key,description=""])=>[name,key,description].join(" | ")).join("\n");
 const template = () => {
   const saved = S.config.lineTemplate;
   return saved && !saved.includes("【NA氏名🔵】") ? saved : DEFAULT_TEMPLATE;
@@ -919,7 +928,69 @@ async function changeStatus(id, bk, status, date){
 
 /* ============ LINE共有（つなぎ依頼） ============ */
 const HO_KEYS = ["ho_person","ho_kind","ho_biz","ho_dt","ho_mgr","ho_points","ho_needs","ho_talked","ho_q","ho_fb","ho_age","ho_rel","ho_memo"];
-function hoDefaultsFor(p){
+function pointsDraft(p, kindName, needsText){
+  const talkPoints = p.talkPoints||[];
+  if(!kindName) return talkPoints.map(x=>"・"+x).join("\n");
+  const needs = lines(needsText).map(x=>x.replace(/^・\s*/,"")).filter(Boolean).slice(0,3);
+  const frustrations = (p.frustrations||[]).map(x=>x.trim()).filter(Boolean);
+  const anxiety = frustrations.slice(0,1).map(x=>`不安：${x} について安心できる説明を`);
+  const example = talkPoints.map(x=>x.trim()).find(Boolean);
+  const meetingNeeds = needs.slice(0,anxiety.length ? 2 : 3);
+  const paNeeds = needs.slice(0,2);
+  const paConcerns = frustrations.slice(0,3-paNeeds.length);
+  let points, prompts, next;
+  switch(kindName){
+    case "転職面談":
+      points = [
+        ...meetingNeeds.slice(0,1).map(x=>`「${x}」を大事にしたいので、条件（勤務時間・給与・通勤など）を具体的に聞いてほしい`),
+        ...meetingNeeds.slice(1).map(x=>`「${x}」を満たす条件を確認してほしい`),
+        ...anxiety,
+      ];
+      prompts = ["転職で重視する条件を聞いてほしい","紹介できる案件の条件を具体的に説明してほしい","転職時期の希望を確認してほしい"];
+      next = "案件の紹介日程を決める";
+      break;
+    case "スクール面談":
+      points = [...meetingNeeds.map(x=>`${x}につながる学びを具体的に見せてほしい`), ...anxiety];
+      prompts = ["スクールで学びたいことを聞いてほしい","受講内容と進め方を具体的に説明してほしい","ビジター受講で体験できることを説明してほしい"];
+      next = "ビジター受講の日程を決める";
+      break;
+    case "企画運営面談":
+      points = needs.map(x=>`${x}を活かせる企画・役割を一緒に考えてほしい`);
+      prompts = ["どんな企画に興味があるか聞いてほしい","企画・運営で担える役割を具体的に紹介してほしい","参加できる時期や時間を確認してほしい"];
+      next = "関われるイベントと役割を決める";
+      break;
+    case "転職PA":
+      points = ["案件紹介はあるが進んでいない理由を一緒に整理してほしい",
+        ...paNeeds.map(x=>`本人が大事にしたいこと：${x}`),
+        ...paConcerns.map(x=>`止まっている原因の候補：${x}`)];
+      prompts = ["紹介された案件と希望条件を照らし合わせてほしい","応募に進むために必要な情報を確認してほしい"];
+      next = "応募する案件を1つ決める";
+      break;
+    case "スクールPA":
+      points = ["面談・ビジター受講のあと、メンバーにならない理由を一緒に整理してほしい",
+        ...paNeeds.map(x=>`本人が求めていること：${x}`),
+        ...paConcerns.map(x=>`迷っている点：${x}`)];
+      prompts = ["メンバーになると受けられるサポートを説明してほしい","判断に必要な情報を確認してほしい"];
+      next = "メンバー登録するか、次の受講日を決める";
+      break;
+    case "目標設定":
+      points = needs.map(x=>`${x} を目標の軸にして、期限つきの目標を一緒に決めてほしい`);
+      prompts = ["本人が達成したいことを聞いてほしい","達成の目安と期限を一緒に決めてほしい","目標に向けて最初に取り組むことを決めてほしい"];
+      next = "次回の振り返り日を決める";
+      break;
+    default: return "";
+  }
+  points = points.concat(prompts.slice(0,Math.max(0,3-points.length))).slice(0,4);
+  points.push("次の一歩："+next);
+  return points.map(x=>"・"+x.replace(/\s*\n\s*/g," ")).join("\n");
+}
+function refreshPointsDraft(force=false){
+  const current=draft("ho_points");
+  if(!force && current && current!==S.d.ho_points_auto) return;
+  const p=S.people.get(draft("ho_person"));
+  S.d.ho_points=S.d.ho_points_auto=p ? pointsDraft(p,draft("ho_kind"),draft("ho_needs")) : "";
+}
+function hoDefaultsFor(p, kindName=""){
   const pr=p.profile||{};
   const bullets = items => (items||[]).filter(x=>x.trim()).slice(0,4).map(x=>"・"+x.trim()).join("\n");
   const logs = S.logs
@@ -931,10 +1002,11 @@ function hoDefaultsFor(p){
     const text = l.text.trim().replace(/\s+/g," ");
     return `・${md(l.date)} ${LOG_TYPES[l.type]}：${text.length>80 ? text.slice(0,80)+"…" : text}`;
   }).join("\n");
+  const needs = bullets(p.needs);
   return {
     ho_age: ageBand(pr.age),
     ho_rel: [pr.relation, pr.sns].filter(Boolean).join("\n"),
-    ho_needs: bullets(p.needs),
+    ho_needs: needs,
     ho_talked: talked || (p.summary||"").slice(0,120),
     ho_q: bullets(p.frustrations),
     ho_memo: [
@@ -942,19 +1014,22 @@ function hoDefaultsFor(p){
         .filter(([,value])=>(value||"").trim()).map(([label,value])=>`${label}：${value.trim().replace(/\s+/g," ")}`),
       ...(p.avoid||[]).filter(x=>x.trim()).map(x=>`・注意：${x.trim().replace(/\s+/g," ")}`),
     ].join("\n"),
-    ho_points: (p.talkPoints||[]).map(x=>"・"+x).join("\n"),
+    ho_points: pointsDraft(p,kindName,needs),
   };
 }
 function hoLoad(h, personId){
   for(const k of HO_KEYS) delete S.d[k];
+  delete S.d.ho_points_auto;
+  delete S.ai.points;
   S.ui.hoId = h ? h.id : null; S.ui.hoOpen = true; S.ui.confirm = null;
   if(h){
     Object.assign(S.d,{ho_person:h.personId,ho_kind:h.kind||"",ho_biz:h.biz||"",ho_dt:h.datetime||"",ho_mgr:h.manager||"",ho_points:h.points||"",ho_needs:h.needs||"",ho_talked:h.talked||"",ho_q:h.questions||"",ho_fb:h.feedback||"",ho_age:h.age||"",ho_rel:h.relation||"",ho_memo:h.memo||""});
   } else if(personId && S.people.has(personId)){
     const p=S.people.get(personId);
     const bk = (biz().find(b=>{const st=(p.biz||{})[b.key];const ph=st&&phaseOf(b.key,st.status);return ph==="proposed"||ph==="connected";})||{}).key||"";
-    const kd = (kinds().find(k=>k[1]===bk)||[""])[0];
-    Object.assign(S.d,{ho_person:personId, ho_biz:bk, ho_kind:kd, ho_mgr:((p.biz||{})[bk]||{}).owner||"", ...hoDefaultsFor(p)});
+    const kd = (kinds().find(k=>bk && k[1]===bk)||[""])[0];
+    Object.assign(S.d,{ho_person:personId, ho_biz:bk, ho_kind:kd, ho_mgr:((p.biz||{})[bk]||{}).owner||"", ...hoDefaultsFor(p,kd)});
+    S.d.ho_points_auto=S.d.ho_points;
   }
 }
 function hoFill(){
@@ -971,15 +1046,22 @@ function hoData(){
     needs:draft("ho_needs"), talked:draft("ho_talked"), questions:draft("ho_q"), feedback:draft("ho_fb"), age:draft("ho_age"), relation:draft("ho_rel"), memo:draft("ho_memo"),
     status:prev.status||"draft", createdAt:prev.createdAt||new Date().toISOString()};
 }
-function pointsPrompt(p, kind, bk, mgr){
+function pointsPrompt(p, kind, bk, mgr, needsText){
   const b=bizBy(bk);
+  const description=kinds().find(k=>k[0]===kind)?.[2]||"";
   return `あなたはAiMのメンバーが、知り合いを社内の面談につなぐときの「伝えてほしいポイント」を作ります。担当者（マネージャー${mgr?`：${mgr}`:""}）がこれを読んで、面談で何をどう話せばいいかがすぐ分かるようにしてください。
 
 ${BRIEF}
 
 【つなぐ面談】${kind||"面談"}${b?`（${b.name}事業）`:""}
+【依頼項目の目的】${description||"指定なし"}
+【ニーズ】
+${needsText||"未入力"}
+
+依頼項目の目的とニーズに合わせて、担当者がこの面談で伝えるべき内容を作る。
+
 【本人の情報】
-${JSON.stringify({name:p.name, profile:p.profile||{}, memo:p.memo||"", summary:p.summary||"", needs:p.needs||[], frustrations:p.frustrations||[], talkPoints:p.talkPoints||[], avoid:p.avoid||[], temp:p.temp||"", 事業の状況:Object.fromEntries(biz().map(x=>[x.name,((p.biz||{})[x.key]||{}).status||"未提案"]))})}
+${JSON.stringify({name:p.name, profile:p.profile||{}, memo:p.memo||"", summary:p.summary||"", frustrations:p.frustrations||[], talkPoints:p.talkPoints||[], avoid:p.avoid||[], temp:p.temp||"", 事業の状況:Object.fromEntries(biz().map(x=>[x.name,((p.biz||{})[x.key]||{}).status||"未提案"]))})}
 
 書き方の例：
 ・フリーランスの可能性とわくわく
@@ -1016,6 +1098,10 @@ function vShare(){
 function hoEditor(){
   const W=S.canWrite; const people=[...S.people.values()].sort((a,b)=>(a.kana||a.name||"").localeCompare(b.kana||b.name||"","ja"));
   const pid=draft("ho_person"); const p=S.people.get(pid);
+  const kind=draft("ho_kind");
+  const choices=kinds();
+  const selectedKind=choices.find(k=>k[0]===kind);
+  const manual=kind==="その他";
   const busy=S.ai.points?.busy; const msg=S.ai.points?.msg;
   const mgrs = uniq([...S.handoffs.map(h=>h.manager), ...[...S.people.values()].flatMap(x=>Object.values(x.biz||{}).map(s=>s.owner))]);
   const cur = S.handoffs.find(h=>h.id===S.ui.hoId);
@@ -1026,19 +1112,25 @@ function hoEditor(){
       <div class="stack" style="gap:12px">
         <div class="fields">
           <label class="f">つなぐ人<select id="ho_person" data-d="ho_person" data-ho="person"><option value="">選んでください</option>${people.map(x=>`<option value="${x.id}" ${pid===x.id?"selected":""}>${esc(x.name)}${x.sample?"（サンプル）":""}</option>`).join("")}</select></label>
-          <label class="f">依頼項目<input id="ho_kind" type="text" list="kindlist" data-d="ho_kind" data-ho="kind" value="${esc(draft("ho_kind"))}" placeholder="例：転職面談"></label>
+          <label class="f">依頼項目
+            <select id="ho_kind" data-d="ho_kind" data-ho="kind">
+              <option value="">選んでください</option>
+              ${choices.map(([name])=>`<option value="${esc(name)}" ${kind===name?"selected":""}>${esc(name)}</option>`).join("")}
+              ${kind&&!selectedKind?`<option value="${esc(kind)}" selected>${esc(kind)}</option>`:""}
+            </select>
+            ${selectedKind?.[2]?`<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">${esc(selectedKind[2])}</span>`:""}
+          </label>
           <label class="f">事業<select id="ho_biz" data-d="ho_biz" data-ho="1"><option value="">指定なし</option>${biz().map(b=>`<option value="${b.key}" ${draft("ho_biz")===b.key?"selected":""}>${esc(b.name)}</option>`).join("")}</select></label>
           <label class="f">日時<input id="ho_dt" type="datetime-local" data-d="ho_dt" data-ho="1" value="${esc(draft("ho_dt"))}"></label>
           <label class="f">マネージャー（担当者）<input id="ho_mgr" type="text" list="mgrlist" data-d="ho_mgr" data-ho="1" value="${esc(draft("ho_mgr"))}"></label>
           <label class="f">年齢<input id="ho_age" type="text" data-d="ho_age" data-ho="1" value="${esc(draft("ho_age"))}" placeholder="例：20代"></label>
         </div>
-        <datalist id="kindlist">${kinds().map(k=>`<option value="${esc(k[0])}">`).join("")}</datalist>
         <datalist id="mgrlist">${mgrs.map(m=>`<option value="${esc(m)}">`).join("")}</datalist>
         <div class="stack" style="gap:6px">
-          <div class="between"><span class="small muted" style="font-weight:600">伝えてほしい内容</span>${S.sample&&W?`<button class="btn sm" data-act="aiPoints" ${busy||!p?"disabled":""}>${icon("spark")}${busy?"作成中…":"この面談向けにAIで作る"}</button>`:""}</div>
-          <textarea id="ho_points" rows="7" data-d="ho_points" data-ho="1" aria-label="伝えてほしい内容" placeholder="・〇〇の可能性とわくわく&#10;→補足&#10;・次回の日程取り">${esc(draft("ho_points"))}</textarea>
-          ${msg?`<p class="hint" style="color:var(--bad);margin:0">${esc(msg)}</p>`:""}
-          ${!S.sample&&W&&p?`<p class="hint" style="margin:0">AIに頼むときは <button class="btn sm" data-act="copyPointsPrompt">AI用にコピー</button> して、返ってきた箇条書きを貼ってください。</p>`:""}
+          <div class="between"><span class="small muted" style="font-weight:600">伝えてほしい内容</span><div class="row">${W&&!manual?`<button class="btn sm" data-act="rebuildPoints" ${p?"":"disabled"}>依頼項目とニーズから作り直す</button>`:""}${S.sample&&W&&!manual?`<button class="btn sm" data-act="aiPoints" ${busy||!p?"disabled":""}>${icon("spark")}${busy?"作成中…":"この面談向けにAIで作る"}</button>`:""}</div></div>
+          <textarea id="ho_points" rows="7" data-d="ho_points" data-ho="1" aria-label="伝えてほしい内容" placeholder="${manual?"その他の依頼は、伝えてほしい内容を自分で書いてください":"・〇〇の可能性とわくわく&#10;→補足&#10;・次回の日程取り"}">${esc(draft("ho_points"))}</textarea>
+          ${msg&&!manual?`<p class="hint" style="color:var(--bad);margin:0">${esc(msg)}</p>`:""}
+          ${!S.sample&&W&&p&&!manual?`<p class="hint" style="margin:0">AIに頼むときは <button class="btn sm" data-act="copyPointsPrompt">AI用にコピー</button> して、返ってきた箇条書きを貼ってください。</p>`:""}
         </div>
         <label class="f">ニーズ<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">本人が求めていること</span><textarea id="ho_needs" rows="3" data-d="ho_needs" data-ho="1">${esc(draft("ho_needs"))}</textarea></label>
         <label class="f">話された内容<span class="hint" style="color:var(--sub);font-size:12px;font-weight:400;margin:0">これまでの面談内容と日付、相手側の反応を簡潔に（つなぐ前に書く）</span><textarea id="ho_talked" rows="3" data-d="ho_talked" data-ho="1">${esc(draft("ho_talked"))}</textarea></label>
@@ -1067,13 +1159,25 @@ function hoEditor(){
   </section>`;
 }
 async function aiPoints(){
-  const p=S.people.get(draft("ho_person")); if(!p) return;
-  S.ai.points={busy:true}; render();
+  const p=S.people.get(draft("ho_person"));
+  if(!p || !S.canWrite || !S.sample || draft("ho_kind")==="その他") return;
+  const makePrompt=()=>pointsPrompt(p,draft("ho_kind"),draft("ho_biz"),draft("ho_mgr"),draft("ho_needs"));
+  const prompt=makePrompt(), original=draft("ho_points");
+  const request={busy:true};
+  S.ai.points=request; render();
   try{
-    const {text} = await S.sample(pointsPrompt(p, draft("ho_kind"), draft("ho_biz"), draft("ho_mgr")), {cache:false});
-    S.d.ho_points = text.trim().replace(/^```\w*\n?/,"").replace(/```$/,"").trim();
+    const {text} = await S.sample(prompt, {cache:false});
+    if(S.ai.points!==request) return;
     delete S.ai.points;
-  }catch(e){ if(e.code==="not_granted"||e.code==="sampling_disabled") S.sample=null; S.ai.points={msg:aiErr(e)}; }
+    if(S.ui.hoOpen && makePrompt()===prompt && draft("ho_points")===original){
+      S.d.ho_points=text.trim().replace(/^```\w*\n?/,"").replace(/```$/,"").trim();
+      delete S.d.ho_points_auto;
+    }
+  }catch(e){
+    if(S.ai.points!==request) return;
+    if(e.code==="not_granted"||e.code==="sampling_disabled") S.sample=null;
+    S.ai.points={msg:aiErr(e)};
+  }
   render();
 }
 async function saveHo(markSent){
@@ -1123,7 +1227,7 @@ function templatePanel(){
     <div class="stack" style="gap:10px;margin-top:12px">
       <p class="hint" style="margin:0">{ } で囲んだ部分に入力内容が入ります。空のときは「ー」になります。使える項目：${PLACEHOLDERS.map(x=>`<code>{${x}}</code>`).join(" ")}</p>
       <textarea id="tpl" rows="14" data-d="tpl" aria-label="フォーマット">${esc(draft("tpl", template()))}</textarea>
-      <label class="f">面談の種類の候補（1行に1つ「種類 | 事業key」。事業key：${biz().map(b=>`${b.key}=${esc(b.name)}`).join("、")}）<textarea id="kinds" rows="5" data-d="kinds">${esc(draft("kinds", kinds().map(k=>k[1]?`${k[0]} | ${k[1]}`:k[0]).join("\n")))}</textarea></label>
+      <label class="f">面談の種類の候補（1行に1つ「名前 | 事業key | 説明」。事業key：${biz().map(b=>`${b.key}=${esc(b.name)}`).join("、")}）<textarea id="kinds" rows="5" data-d="kinds">${esc(draft("kinds", kindChoicesText()))}</textarea></label>
       <div class="row"><button class="btn pri" data-act="saveTpl">保存</button><button class="btn" data-act="resetTpl">最初のフォーマットに戻す</button></div>
     </div></details>`;
 }
@@ -1301,6 +1405,10 @@ document.addEventListener("toggle", e=>{ if(e.target.dataset && e.target.dataset
 document.addEventListener("input", e=>{
   const el=e.target;
   if(el.dataset.d!==undefined){ S.d[el.dataset.d] = el.type==="checkbox" ? el.checked : el.value; }
+  if(el.id==="ho_needs" && S.canWrite){
+    refreshPointsDraft();
+    $("#ho_points").value=draft("ho_points");
+  }
   if(el.dataset.ho){ const t=$("#ho_text"); if(t){ const txt=hoFill(); t.value=txt; const l=$("#ho_line"); if(l) l.href="https:"+SL2+"line.me/R/share?text="+encodeURIComponent(txt); } }
   if(el.dataset.filter){ S.ui.filters[el.dataset.filter]=el.value; if(el.tagName==="INPUT"){ clearTimeout(window._ft); window._ft=setTimeout(()=>{ const pos=el.selectionStart; render(); const n=$("#fq"); if(n){ n.focus(); n.setSelectionRange(pos,pos);} },250);} }
   if(el.id==="meName"){ S.d.me=el.value; clearTimeout(window._mt); window._mt=setTimeout(()=>safe(()=>store.saveConfig({me:el.value.trim()})),800); }
@@ -1310,8 +1418,26 @@ document.addEventListener("change", e=>{
   if(el.dataset.d!==undefined) S.d[el.dataset.d] = el.type==="checkbox" ? el.checked : el.value;
   if(el.dataset.filter){ S.ui.filters[el.dataset.filter]=el.value; render(); return; }
   if(el.dataset.apply){ const id=route().id; S.ai[id].off=S.ai[id].off||{}; S.ai[id].off[el.dataset.apply]=!el.checked; return; }
-  if(el.dataset.ho==="person"){ const keep={ho_kind:draft("ho_kind"),ho_dt:draft("ho_dt"),ho_mgr:draft("ho_mgr")}; const hid=S.ui.hoId; hoLoad(null,el.value); S.ui.hoId=hid; for(const [k,v] of Object.entries(keep)) if(v) S.d[k]=v; render(); return; }
-  if(el.dataset.ho==="kind"){ const k=kinds().find(k=>k[0]===el.value.trim()); if(k&&k[1]&&!draft("ho_biz")) S.d.ho_biz=k[1]; else if(k&&k[1]) S.d.ho_biz=k[1]; render(); return; }
+  if(el.dataset.ho==="person"){
+    const keep={ho_kind:draft("ho_kind"),ho_dt:draft("ho_dt"),ho_mgr:draft("ho_mgr")};
+    const points=draft("ho_points"), auto=S.d.ho_points_auto;
+    const hid=S.ui.hoId;
+    hoLoad(null,el.value);
+    S.ui.hoId=hid;
+    for(const [k,v] of Object.entries(keep)) if(v) S.d[k]=v;
+    const bk=kinds().find(k=>k[0]===draft("ho_kind"))?.[1];
+    if(bk) S.d.ho_biz=bk;
+    S.d.ho_points=points;
+    S.d.ho_points_auto=auto;
+    if(S.canWrite) refreshPointsDraft();
+    render(); return;
+  }
+  if(el.dataset.ho==="kind"){
+    const bk=kinds().find(k=>k[0]===el.value)?.[1];
+    if(bk) S.d.ho_biz=bk;
+    if(S.canWrite) refreshPointsDraft();
+    render(); return;
+  }
   if(el.dataset.ho && el.tagName==="SELECT"){ render(); return; }
   if(el.dataset.rerender){ delete S.d.share_txt; safe(()=>store.saveConfig({shareAsk:el.value})); render(); return; }
   const a=el.dataset.act;
@@ -1471,18 +1597,19 @@ async function onAct(e, el, a, pid){
     case "applyAI": await applyAI(pid); return;
     case "discardAI": delete S.ai[pid]; render(); return;
     /* LINE共有 */
-    case "newHo": hoLoad(null, pid||""); delete S.ai.points; goShare(); return;
-    case "openHo": { const h=S.handoffs.find(x=>x.id===el.dataset.hid); if(!h) return; hoLoad(h); delete S.ai.points; goShare(); return; }
+    case "newHo": hoLoad(null, pid||""); goShare(); return;
+    case "openHo": { const h=S.handoffs.find(x=>x.id===el.dataset.hid); if(!h) return; hoLoad(h); goShare(); return; }
     case "closeHo": S.ui.hoOpen=false; S.ui.hoId=null; render(); return;
+    case "rebuildPoints": if(S.canWrite && draft("ho_kind")!=="その他"){ refreshPointsDraft(true); render(); } return;
     case "aiPoints": aiPoints(); return;
-    case "copyPointsPrompt": { const pp=S.people.get(draft("ho_person")); if(pp) copyText(pointsPrompt(pp,draft("ho_kind"),draft("ho_biz"),draft("ho_mgr"))); return; }
+    case "copyPointsPrompt": { const pp=S.people.get(draft("ho_person")); if(pp) copyText(pointsPrompt(pp,draft("ho_kind"),draft("ho_biz"),draft("ho_mgr"),draft("ho_needs"))); return; }
     case "copyHo": copyText(hoFill()); return;
     case "saveHo": await saveHo(false); return;
     case "sentHo": await saveHo(true); return;
     case "askDelHo": S.ui.confirm="ho:"+S.ui.hoId; render(); return;
     case "delHo": { const id=S.ui.hoId; S.ui.confirm=null; S.ui.hoOpen=false; S.ui.hoId=null; await safe(()=>store.deleteHandoff(id),"削除しました"); render(); return; }
     case "saveTpl": {
-      const ks = lines(draft("kinds", kinds().map(k=>k[1]?`${k[0]} | ${k[1]}`:k[0]).join("\n"))).map(l=>{ const [n,b]=l.split("|").map(s=>s.trim()); return [n, bizBy(b)?b:""]; }).filter(k=>k[0]);
+      const ks = lines(draft("kinds", kindChoicesText())).map(l=>{ const [n,b,description=""]=l.split("|").map(s=>s.trim()); return [n, bizBy(b)?b:"", description]; }).filter(k=>k[0]);
       await safe(()=>store.saveConfig({lineTemplate:draft("tpl",template()), kinds:ks}),"フォーマットを保存しました");
       delete S.d.tpl; delete S.d.kinds; render(); return;
     }
